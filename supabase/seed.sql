@@ -1,0 +1,3 @@
+-- Cenato: dati di prova (seed) per Supabase.
+-- Solo dati FITTIZI: nessun dato sanitario reale (vedi CLAUDE.md).
+-- Le tabelle si creano con le migrazioni in supabase/migrations/.
