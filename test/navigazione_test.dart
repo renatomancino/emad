@@ -3,7 +3,9 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:cenato/core/router/rotte.dart';
 import 'package:cenato/core/router/router.dart';
+import 'package:cenato/core/dipendenze.dart';
 import 'package:cenato/data/finto/auth_repository_finto.dart';
+import 'package:cenato/data/finto/pazienti_repository_finto.dart';
 import 'package:cenato/domain/modelli/profilo.dart';
 import 'package:cenato/main.dart';
 
@@ -12,7 +14,16 @@ import 'package:cenato/main.dart';
 void main() {
   Future<AuthRepositoryFinto> avvia(WidgetTester tester, {Ruolo? ruolo}) async {
     final auth = AuthRepositoryFinto(ruoloIniziale: ruolo);
-    await tester.pumpWidget(CenatoApp(auth: auth));
+    final dati = DatiFinti();
+    await tester.pumpWidget(
+      CenatoApp(
+        dip: Dipendenze(
+          auth: auth,
+          pazienti: PazientiRepositoryFinto(dati),
+          abbonamento: AbbonamentoRepositoryFinto(dati),
+        ),
+      ),
+    );
     await tester.pumpAndSettle();
     return auth;
   }
@@ -53,10 +64,7 @@ void main() {
     tester,
   ) async {
     await avvia(tester, ruolo: Ruolo.nutrizionista);
-    expect(
-      find.text('Semaforo, ultimo check-in e prossima visita'),
-      findsOneWidget,
-    );
+    expect(find.text('Elenco, filtri e inviti'), findsOneWidget);
 
     await tester.tap(find.text('Calendario'));
     await tester.pumpAndSettle();
@@ -74,10 +82,7 @@ void main() {
     final auth = await avvia(tester);
     auth.simulaAccesso(Ruolo.nutrizionista);
     await tester.pumpAndSettle();
-    expect(
-      find.text('Semaforo, ultimo check-in e prossima visita'),
-      findsOneWidget,
-    );
+    expect(find.text('Elenco, filtri e inviti'), findsOneWidget);
   });
 
   testWidgets('il logout dal profilo del paziente torna all\'accesso', (

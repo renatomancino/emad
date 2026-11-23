@@ -68,6 +68,8 @@ Il controllo n. 30 nella prima esecuzione attendeva solo `42501`. Il rifiuto è 
 
 I vincoli dello schema hanno un test a parte, `supabase/tests/schema_vincoli.sql`: 14 controlli su 14 OK.
 
+Piani, limiti e inviti (migrazione `003_abbonamento.sql`) sono provati con gli account demo da `supabase/tests/abbonamento.sql`: **16 controlli su 16 OK** (23/11/2026), più la scadenza verificata a parte: un codice scaduto è rifiutato (CN002) e l'invito passa a *scaduto* (SCD_1); il caso è stato poi aggiunto in fondo al file. Tra questi: Free bloccato al 2° invito con il messaggio di RF_GAD_7, passaggio a Start con pagamento simulato e invito riuscito, ritorno a Free bloccato, revoca dell'invito, riattivazione e archiviazione con i limiti di Start, codice revocato non più valido. La stessa regola è provata in Dart da `test/limiti_piano_test.dart`.
+
 ## Policy per tabella
 
 `anon` non ha alcun privilegio su nessuna tabella. Per `authenticated` le colonne scrivibili sono limitate con `GRANT` per colonna; la RLS decide quali righe.

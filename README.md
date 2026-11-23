@@ -97,7 +97,7 @@ Il codice è organizzato a livelli (RNF_S_1): presentazione, logica (domain), da
 │  ├─ test-rls.md             esito dei test delle policy di accesso
 │  └─ demo-dati.md            account e dati della demo, come rigenerarli
 ├─ supabase/
-│  ├─ migrations/             000_profili.sql, 001_schema.sql, 002_rls.sql (in ordine)
+│  ├─ migrations/             000_profili.sql … 003_abbonamento.sql (in ordine)
 │  ├─ tests/                  test SQL di vincoli e RLS (non lasciano dati)
 │  └─ seed.sql                dati di prova fittizi + reset (rieseguibile)
 ├─ lib/
@@ -113,9 +113,9 @@ Il codice è organizzato a livelli (RNF_S_1): presentazione, logica (domain), da
 │  │  ├─ nutrizionista/       barra con Pazienti, Calendario, Profilo e abbonamento
 │  │  └─ comuni/              caricamento, stato vuoto, errore con Riprova, pulsanti, campi, profilo
 │  ├─ domain/                 modelli, regole e interfacce, senza dipendenze da Supabase
-│  │  ├─ modelli/             Profilo, Ruolo
+│  │  ├─ modelli/             Profilo, Ruolo, Piano, Paziente, Invito
 │  │  ├─ repository/          interfacce (es. AuthRepository)
-│  │  └─ regole/              aderenza, semaforo, limiti del piano
+│  │  └─ regole/              limiti del piano (poi aderenza e semaforo)
 │  └─ data/                   accesso ai dati
 │     ├─ supabase/            client Supabase e autenticazione
 │     ├─ finto/               implementazioni finte per test e ruolo simulato

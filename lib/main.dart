@@ -3,13 +3,15 @@ import 'package:material_ui/material_ui.dart';
 
 import 'core/config/env.dart';
 import 'core/costanti/testi.dart';
+import 'core/dipendenze.dart';
 import 'core/router/router.dart';
 import 'core/tema/tema.dart';
 import 'data/finto/auth_repository_finto.dart';
+import 'data/finto/pazienti_repository_finto.dart';
+import 'data/supabase/pazienti_repository_supabase.dart';
 import 'data/supabase/supabase_auth_repository.dart';
 import 'data/supabase/supabase_service.dart';
 import 'domain/modelli/profilo.dart';
-import 'domain/repository/auth_repository.dart';
 import 'presentation/comuni/errore_configurazione_page.dart';
 
 /// Ruolo simulato per provare la navigazione senza Supabase:
@@ -23,9 +25,14 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   if (_ruoloFinto.isNotEmpty) {
+    final dati = DatiFinti();
     runApp(
       CenatoApp(
-        auth: AuthRepositoryFinto(ruoloIniziale: Ruolo.daDb(_ruoloFinto)),
+        dip: Dipendenze(
+          auth: AuthRepositoryFinto(ruoloIniziale: Ruolo.daDb(_ruoloFinto)),
+          pazienti: PazientiRepositoryFinto(dati),
+          abbonamento: AbbonamentoRepositoryFinto(dati),
+        ),
       ),
     );
     return;
@@ -50,21 +57,30 @@ Future<void> main() async {
     return;
   }
 
-  runApp(CenatoApp(auth: SupabaseAuthRepository(SupabaseService.client)));
+  final db = SupabaseService.client;
+  runApp(
+    CenatoApp(
+      dip: Dipendenze(
+        auth: SupabaseAuthRepository(db),
+        pazienti: PazientiRepositorySupabase(db),
+        abbonamento: AbbonamentoRepositorySupabase(db),
+      ),
+    ),
+  );
 }
 
 /// Radice dell'app: tema e router con reindirizzamento per ruolo.
 class CenatoApp extends StatefulWidget {
-  const CenatoApp({super.key, required this.auth});
+  const CenatoApp({super.key, required this.dip});
 
-  final AuthRepository auth;
+  final Dipendenze dip;
 
   @override
   State<CenatoApp> createState() => _CenatoAppState();
 }
 
 class _CenatoAppState extends State<CenatoApp> {
-  late final GoRouter _router = creaRouter(widget.auth);
+  late final GoRouter _router = creaRouter(widget.dip);
 
   @override
   void dispose() {

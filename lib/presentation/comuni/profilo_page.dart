@@ -1,22 +1,26 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../../core/costanti/testi.dart';
+import '../../core/dipendenze.dart';
 import '../../core/tema/tema.dart';
 import '../../domain/modelli/profilo.dart';
 import '../../domain/repository/auth_repository.dart';
+import '../../domain/repository/pazienti_repository.dart';
+import '../nutrizionista/abbonamento_view.dart';
 import 'segnaposto_page.dart';
 
 /// Profilo dell'utente con il logout (UC_GA_2, passi 7-8).
-/// Modifica del profilo, abbonamento ed eliminazione dell'account arrivano
-/// nelle schede della fase 1 (UC_GA_3, UC_GA_5, UC_GAD_3).
+/// Nutrizionista: abbonamento (UC_GAD_3). Paziente: interruzione del
+/// collegamento (UC_GI_5). Modifica dei dati ed eliminazione dell'account
+/// arrivano con la scheda "Profilo ed eliminazione account" (UC_GA_3, UC_GA_5).
 class ProfiloPage extends StatefulWidget {
   const ProfiloPage({
     super.key,
-    required this.auth,
+    required this.dip,
     this.mostraIndietro = false,
   });
 
-  final AuthRepository auth;
+  final Dipendenze dip;
 
   /// `true` quando la pagina è aperta sopra una sezione (paziente).
   final bool mostraIndietro;
@@ -26,14 +30,14 @@ class ProfiloPage extends StatefulWidget {
 }
 
 class _ProfiloPageState extends State<ProfiloPage> {
-  bool _inUscita = false;
+  bool _inCorso = false;
 
-  Future<void> _esci() async {
-    final conferma = await showDialog<bool>(
+  Future<bool> _conferma(String titolo, String testo, String azione) async {
+    final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text(Testi.esci),
-        content: const Text(Testi.esciConferma),
+        title: Text(titolo),
+        content: Text(testo),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -41,38 +45,67 @@ class _ProfiloPageState extends State<ProfiloPage> {
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text(Testi.esci),
+            child: Text(azione),
           ),
         ],
       ),
     );
-    if (conferma != true) return;
-    setState(() => _inUscita = true);
+    return ok == true;
+  }
+
+  Future<void> _avvisa(String messaggio) async {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(messaggio)));
+  }
+
+  Future<void> _esci() async {
+    if (!await _conferma(Testi.esci, Testi.esciConferma, Testi.esci)) return;
+    setState(() => _inCorso = true);
     try {
       // Il router torna da solo alla schermata di accesso.
-      await widget.auth.esci();
+      await widget.dip.auth.esci();
     } on ErroreAuth catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(e.messaggio)));
+      await _avvisa(e.messaggio);
     } finally {
-      if (mounted) setState(() => _inUscita = false);
+      if (mounted) setState(() => _inCorso = false);
+    }
+  }
+
+  Future<void> _scollegati() async {
+    final ok = await _conferma(
+      'Interrompere il collegamento?',
+      'Il tuo nutrizionista non vedrà più i nuovi dati e le visite future '
+          'verranno annullate. I dati già registrati restano nel suo storico. '
+          'Per tornare a essere seguito servirà un nuovo invito.',
+      'Interrompi',
+    );
+    if (!ok) return;
+    setState(() => _inCorso = true);
+    try {
+      await widget.dip.pazienti.scollegati();
+      await _avvisa('Collegamento interrotto.');
+    } on ErroreOperazione catch (e) {
+      await _avvisa(e.messaggio);
+    } finally {
+      if (mounted) setState(() => _inCorso = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final profilo = widget.auth.profilo;
+    final profilo = widget.dip.auth.profilo;
     final nutrizionista = profilo?.ruolo == Ruolo.nutrizionista;
     final testo = Theme.of(context).textTheme;
-    final intestazione = IntestazioneSezione(
-      titolo: nutrizionista ? Testi.profiloAbbonamentoTitolo : Testi.profilo,
-      sottotitolo: profilo?.ruolo.etichetta,
-    );
     return Scaffold(
       appBar: widget.mostraIndietro
           ? AppBar(title: const Text(Testi.profilo))
-          : intestazione,
+          : IntestazioneSezione(
+              titolo: nutrizionista
+                  ? Testi.profiloAbbonamentoTitolo
+                  : Testi.profilo,
+              sottotitolo: profilo?.ruolo.etichetta,
+            ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -90,26 +123,32 @@ class _ProfiloPageState extends State<ProfiloPage> {
               subtitle: Text(profilo?.ruolo.etichetta ?? ''),
             ),
           ),
-          const SizedBox(height: 12),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(
-                nutrizionista
-                    ? 'In arrivo: dati del profilo, disponibilità, piano di '
-                          'abbonamento Free / Start / Pro (UC_GA_3, UC_GV_3, UC_GAD_3).'
-                    : 'In arrivo: dati del profilo, promemoria, interruzione del '
-                          'collegamento ed eliminazione dell\'account (UC_GA_3, '
-                          'UC_GN_2, UC_GI_5, UC_GA_5).',
-                style: testo.bodyMedium?.copyWith(
-                  color: ColoriCenato.testoSecondario,
+          const SizedBox(height: 16),
+          if (nutrizionista)
+            AbbonamentoView(repository: widget.dip.abbonamento)
+          else ...[
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  'In arrivo: dati del profilo, promemoria ed eliminazione '
+                  'dell\'account (UC_GA_3, UC_GN_2, UC_GA_5).',
+                  style: testo.bodyMedium?.copyWith(
+                    color: ColoriCenato.testoSecondario,
+                  ),
                 ),
               ),
             ),
-          ),
-          const SizedBox(height: 24),
+            const SizedBox(height: 16),
+            OutlinedButton.icon(
+              onPressed: _inCorso ? null : _scollegati,
+              icon: const Icon(Icons.link_off),
+              label: const Text('Interrompi il collegamento'),
+            ),
+          ],
+          const SizedBox(height: 16),
           OutlinedButton.icon(
-            onPressed: _inUscita ? null : _esci,
+            onPressed: _inCorso ? null : _esci,
             icon: const Icon(Icons.logout),
             label: const Text(Testi.esci),
           ),

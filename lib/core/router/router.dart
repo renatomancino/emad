@@ -3,11 +3,13 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../domain/modelli/profilo.dart';
 import '../../domain/repository/auth_repository.dart';
+import '../dipendenze.dart';
 import '../../presentation/auth/prova_auth_page.dart';
 import '../../presentation/auth/segnaposto_auth.dart';
 import '../../presentation/comuni/profilo_page.dart';
 import '../../presentation/comuni/stati_view.dart';
 import '../../presentation/nutrizionista/calendario_page.dart';
+import '../../presentation/nutrizionista/invito_page.dart';
 import '../../presentation/nutrizionista/nutrizionista_shell.dart';
 import '../../presentation/nutrizionista/pazienti_page.dart';
 import '../../presentation/paziente/andamento_page.dart';
@@ -50,7 +52,8 @@ String? reindirizza(AuthRepository auth, String percorso) {
 }
 
 /// Router dell'app (go_router). Si aggiorna quando cambia la sessione.
-GoRouter creaRouter(AuthRepository auth) {
+GoRouter creaRouter(Dipendenze dip) {
+  final auth = dip.auth;
   return GoRouter(
     initialLocation: Rotte.caricamento,
     refreshListenable: auth,
@@ -129,7 +132,7 @@ GoRouter creaRouter(AuthRepository auth) {
       GoRoute(
         path: Rotte.pazienteProfilo,
         builder: (context, stato) =>
-            ProfiloPage(auth: auth, mostraIndietro: true),
+            ProfiloPage(dip: dip, mostraIndietro: true),
       ),
 
       // ------------------------------------------------ nutrizionista
@@ -141,7 +144,13 @@ GoRouter creaRouter(AuthRepository auth) {
             routes: [
               GoRoute(
                 path: Rotte.nutPazienti,
-                builder: (context, stato) => const PazientiPage(),
+                builder: (context, stato) => PazientiPage(dip: dip),
+                routes: [
+                  GoRoute(
+                    path: 'invito',
+                    builder: (context, stato) => InvitoPage(dip: dip),
+                  ),
+                ],
               ),
             ],
           ),
@@ -157,7 +166,7 @@ GoRouter creaRouter(AuthRepository auth) {
             routes: [
               GoRoute(
                 path: Rotte.nutProfilo,
-                builder: (context, stato) => ProfiloPage(auth: auth),
+                builder: (context, stato) => ProfiloPage(dip: dip),
               ),
             ],
           ),

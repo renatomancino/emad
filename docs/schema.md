@@ -2,7 +2,7 @@
 
 Schema Postgres di Cenato su Supabase, ricavato dagli oggetti **Entity** e dal **Class Diagram** del RAD (`docs/rad/08-modello-ad-oggetti.md`) e dagli **StateChart** (`docs/rad/09-modello-dinamico.md`).
 
-- Migrazioni: `supabase/migrations/000_profili.sql`, `001_schema.sql`, `002_rls.sql`
+- Migrazioni: `supabase/migrations/000_profili.sql`, `001_schema.sql`, `002_rls.sql`, `003_abbonamento.sql`
 - Test dei vincoli: `supabase/tests/schema_vincoli.sql` (14 controlli, tutti OK il 23/11/2026)
 - Policy di accesso: `docs/test-rls.md`
 
@@ -113,6 +113,8 @@ I valori **[DA CONFERMARE]** sono funzioni SQL: per cambiarli basta modificare u
 | `limite_pazienti('free' / 'start' / 'pro')` | 1 / 5 / illimitato | RF_GAD_4 |
 | `giorni_validita_invito()` | 7 | UC_GI_1 |
 | `ore_minime_annullamento()` | 24 | RF_GV_9 |
+| `prezzo_piano(piano, periodo)` | Start 12 €/mese o 120 €/anno; Pro 25 €/mese o 250 €/anno (centesimi, IVA esclusa) | RF_GAD_5 |
+| `privato.posti_occupati(...)` | Free: collegati a vita + inviti in attesa; Start: attivi + inviti in attesa | RF_GAD_4 |
 
 Le soglie del semaforo (0,8 e 0,4) e i punti dei check-in stanno nel codice Dart (`lib/core/costanti`) con la scheda del calcolo dell'aderenza (fase 3).
 

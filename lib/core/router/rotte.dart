@@ -15,6 +15,7 @@ abstract final class Rotte {
 
   // Nutrizionista
   static const nutPazienti = '/nutrizionista/pazienti';
+  static const nutInvito = '/nutrizionista/pazienti/invito';
   static const nutCalendario = '/nutrizionista/calendario';
   static const nutProfilo = '/nutrizionista/profilo';
 

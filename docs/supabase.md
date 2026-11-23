@@ -42,6 +42,7 @@ Le migrazioni sono in `supabase/migrations/` e vanno eseguite **in ordine**:
 | `000_profili.sql` | Tabella `profili` con ruolo, trigger su `auth.users`, ruolo non modificabile | Progetto Supabase (UE) e autenticazione |
 | `001_schema.sql` | Tutte le tabelle del Class Diagram, enum e vincoli | Schema del database |
 | `002_rls.sql` | Row Level Security, policy per ruolo e funzioni RPC | Policy RLS per ruolo |
+| `003_abbonamento.sql` | Regola dei posti occupati in un solo punto, stato dell'abbonamento, cambio piano simulato | Piani Free/Start/Pro, limiti e abbonamento simulato |
 
 Due modi:
 
