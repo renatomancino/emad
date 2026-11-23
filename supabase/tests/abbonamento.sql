@@ -29,7 +29,7 @@ create or replace function pg_temp.esito(p_prova text, p_ottenuto text, p_ok boo
 $f$;
 
 do $$
-declare r text; s record;
+declare r text; s record; c_scad text;
 begin
   -- Elena: piano Free con Anna già collegata (SC_GAD_2)
   perform pg_temp.come('elena@example.com');
@@ -76,21 +76,21 @@ begin
 
   -- Il codice revocato non è più accettabile (SCD_1)
   perform pg_temp.come('marco@example.com');
-  r := pg_temp.esegui('select * from public.anteprima_invito(''GIULIA26'')');
-  perform pg_temp.esito('Codice revocato non più valido', r, r like 'CN002%');
+  r := pg_temp.esegui('select * from public.verifica_invito(''GIULIA26'')');
+  perform pg_temp.esito('Codice revocato rifiutato con messaggio distinto (CN013)', r, r like 'CN013%');
   r := pg_temp.esegui('select * from public.stato_abbonamento()');
   perform pg_temp.esito('Un paziente non ha abbonamento', r, r like 'CN007%');
   execute 'reset role';
 
-  -- Scadenza (SCD_1): un codice oltre la scadenza è rifiutato e passa a "scaduto"
+  -- Scadenza (SCD_1): un codice oltre la scadenza è rifiutato e passa a "scaduto".
+  -- Il codice si legge come nutrizionista: il paziente non vede gli inviti (RLS).
   perform pg_temp.come('giulia@example.com');
-  perform public.crea_invito('Scadenza');
+  select codice into c_scad from public.crea_invito('Scadenza');
   execute 'reset role';
-  update public.inviti set scadenza = now() - interval '1 minute' where codice <> 'GIULIA26'
-    and paziente_id in (select id from public.pazienti where nome = 'Scadenza');
+  update public.inviti set scadenza = now() - interval '1 minute' where codice = c_scad;
   perform pg_temp.come('marco@example.com');
-  r := pg_temp.esegui('select * from public.anteprima_invito((select codice from public.inviti i join public.pazienti p on p.id = i.paziente_id where p.nome = ''Scadenza''))');
-  perform pg_temp.esito('Codice scaduto rifiutato', r, r like 'CN002%');
+  r := pg_temp.esegui(format('select * from public.verifica_invito(%L)', c_scad));
+  perform pg_temp.esito('Codice scaduto rifiutato con messaggio distinto (CN011)', r, r like 'CN011%');
   execute 'reset role';
   perform pg_temp.come('giulia@example.com');
   perform public.crea_invito('Altro');

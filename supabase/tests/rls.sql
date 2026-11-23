@@ -69,12 +69,12 @@ declare
 begin
   -- ---------------------------------------------------------------- dati
   insert into auth.users (id, email, raw_user_meta_data) values
-    (nut_a, 'nut.a@rls.local', '{"ruolo":"nutrizionista","nome":"Nut A"}'),
-    (nut_b, 'nut.b@rls.local', '{"ruolo":"nutrizionista","nome":"Nut B"}'),
-    (u_a1,  'paz.a1@rls.local', '{"ruolo":"paziente","nome":"Paz A1"}'),
-    (u_a2,  'paz.a2@rls.local', '{"ruolo":"paziente","nome":"Paz A2"}'),
-    (u_b1,  'paz.b1@rls.local', '{"ruolo":"paziente","nome":"Paz B1"}'),
-    (u_nuovo, 'paz.nuovo@rls.local', '{"ruolo":"paziente","nome":"Paz Nuovo"}');
+    (nut_a, 'nut.a@rls.local', '{"consenso_dati":true,"ruolo":"nutrizionista","nome":"Nut A"}'),
+    (nut_b, 'nut.b@rls.local', '{"consenso_dati":true,"ruolo":"nutrizionista","nome":"Nut B"}'),
+    (u_a1,  'paz.a1@rls.local', '{"consenso_dati":true,"ruolo":"paziente","nome":"Paz A1"}'),
+    (u_a2,  'paz.a2@rls.local', '{"consenso_dati":true,"ruolo":"paziente","nome":"Paz A2"}'),
+    (u_b1,  'paz.b1@rls.local', '{"consenso_dati":true,"ruolo":"paziente","nome":"Paz B1"}'),
+    (u_nuovo, 'paz.nuovo@rls.local', '{"consenso_dati":true,"ruolo":"paziente","nome":"Paz Nuovo"}');
   update public.nutrizionisti set piano_abbonamento = 'pro', periodo_fatturazione = 'annuale' where id = nut_a;
 
   insert into public.pazienti (nutrizionista_id, utente_id, stato, data_collegamento) values
@@ -209,7 +209,7 @@ begin
 
   -- ------------------------------------------------------- paziente senza nutrizionista
   r := pg_temp.esegui(u_nuovo, 'select public.accetta_invito(''ZZZZZZZZ'')');
-  perform pg_temp.registra('PAZ nuovo', 'Codice inesistente rifiutato', 'CN002', r, r like 'CN002%');
+  perform pg_temp.registra('PAZ nuovo', 'Codice inesistente rifiutato', 'CN010', r, r like 'CN010%');
   r := pg_temp.esegui(u_nuovo, format('select public.accetta_invito(%L)', (select codice from public.inviti where nutrizionista_id = nut_a limit 1)));
   perform pg_temp.registra('PAZ nuovo', 'Accetta l''invito di NUT A', 'ok', r, r = 'ok');
   c := pg_temp.conta(nut_a, 'select count(*) from public.pazienti where stato = ''attivo''');

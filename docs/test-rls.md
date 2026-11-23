@@ -55,7 +55,7 @@ Utenti di prova creati dallo script: **NUT A** (piano Pro, pazienti A1 e A2), **
 | 40 | PAZ A1 | Seconda visita futura rifiutata | CN004 | CN004 |
 | 41 | PAZ A2 | Slot già preso da A1 rifiutato (RNF_A_6) | CN003 | CN003 |
 | 42 | PAZ A2 | Non vede la visita di A1 | 0 | 0 |
-| 43 | Paz. nuovo | Codice di invito inesistente rifiutato | CN002 | CN002 |
+| 43 | Paz. nuovo | Codice di invito inesistente rifiutato | CN010 | CN010 |
 | 44 | Paz. nuovo | Accetta l'invito di NUT A | ok | ok |
 | 45 | NUT A | Vede il nuovo paziente Attivo | 3 | 3 |
 | 46 | PAZ A1 | Si scollega (RF_GI_7) | ok | ok |
@@ -66,7 +66,13 @@ Utenti di prova creati dallo script: **NUT A** (piano Pro, pazienti A1 e A2), **
 
 Il controllo n. 30 nella prima esecuzione attendeva solo `42501`. Il rifiuto è arrivato prima, dal trigger di verifica dei check-in (`23514`: il paziente non vede il pasto altrui). La scrittura è comunque negata: il test ora accetta entrambi i codici e il n. 31 verifica che la riga non sia stata scritta.
 
-I vincoli dello schema hanno un test a parte, `supabase/tests/schema_vincoli.sql`: 14 controlli su 14 OK.
+Dopo le migrazioni 004 e 005 (23/11/2026) i test sono stati rieseguiti: `rls.sql` **50/50 OK** (il n. 43 ora attende CN010, perché `accetta_invito` distingue i casi di codice non valido).
+
+I vincoli dello schema hanno un test a parte, `supabase/tests/schema_vincoli.sql`: **16 controlli su 16 OK** (14 + registrazione senza consenso rifiutata + data e versione del consenso registrate).
+
+Account e inviti (migrazione `004_account_inviti.sql`): `supabase/tests/account_inviti.sql`, **21 su 21 OK**. Tra questi: `verifica_invito` anche da non autenticati; errori distinti per codice inesistente (CN010), scaduto (CN011, l'invito passa a *scaduto*), già usato (CN012) e revocato (CN013); nessun dato del paziente invitato esposto; registrazione senza consenso rifiutata; link con un codice valido e un altro nutrizionista già collegato (CN008).
+
+Eliminazione account (migrazione `005_elimina_account.sql`): `supabase/tests/elimina_account.sql`, **17 su 17 OK**. Paziente: dati clinici e account cancellati, resta un guscio anonimo "Account eliminato" archiviato; nutrizionista: cancellati i suoi dati e quelli dei suoi pazienti, gli account dei pazienti restano scollegati; nel Free il posto resta occupato anche dopo l'eliminazione del paziente; senza login nessuna eliminazione. Le scelte sono in `docs/decisioni-sviluppo.md`.
 
 Piani, limiti e inviti (migrazione `003_abbonamento.sql`) sono provati con gli account demo da `supabase/tests/abbonamento.sql`: **16 controlli su 16 OK** (23/11/2026), più la scadenza verificata a parte: un codice scaduto è rifiutato (CN002) e l'invito passa a *scaduto* (SCD_1); il caso è stato poi aggiunto in fondo al file. Tra questi: Free bloccato al 2° invito con il messaggio di RF_GAD_7, passaggio a Start con pagamento simulato e invito riuscito, ritorno a Free bloccato, revoca dell'invito, riattivazione e archiviazione con i limiti di Start, codice revocato non più valido. La stessa regola è provata in Dart da `test/limiti_piano_test.dart`.
 
@@ -80,7 +86,7 @@ Piani, limiti e inviti (migrazione `003_abbonamento.sql`) sono provati con gli a
 | `nutrizionisti` | legge e modifica (titolo, durata visita) il proprio | legge il proprio nutrizionista |
 | `abbonamenti` | legge i propri | — |
 | `pazienti` | legge i propri (tutti gli stati); modifica solo i dati anagrafici | legge i propri collegamenti; modifica i propri dati se Attivo |
-| `inviti` | legge i propri | — (usa `anteprima_invito` e `accetta_invito`) |
+| `inviti` | legge i propri | — (usa `verifica_invito` e `accetta_invito`) |
 | `obiettivi` | legge e inserisce per i propri pazienti | legge i propri |
 | `alimenti` | legge tutto; inserisce; aggiorna cache OFF e i propri personalizzati | legge tutto (nomi nel piano) |
 | `piani` | legge, crea e aggiorna per i propri pazienti; cancella solo bozze | legge le versioni assegnate (non le bozze) |
@@ -105,15 +111,16 @@ Tutte `security definer` con controllo del chiamante; errori con codice e messag
 |---|---|---|---|
 | `crea_invito(nome)` | NUT | Verifica il limite del piano (Free: pazienti mai collegati + inviti in attesa; Start: attivi + inviti) e crea codice e paziente Invitato | CN001, CN007 |
 | `revoca_invito(id)` | NUT | Invito Creato → Revocato (RF_GI_8) | CN007 |
-| `anteprima_invito(codice)` | PAZ | Nome del nutrizionista prima di confermare (UC_GI_2, passo 3) | CN002 |
-| `accetta_invito(codice)` | PAZ | Verifica codice e limite, collega il paziente (Attivo) | CN001, CN002, CN007, CN008 |
+| `verifica_invito(codice)` | chiunque (anche non registrato) | Nome del nutrizionista e scadenza, prima di registrarsi o confermare (UC_GI_2, passo 3) | CN010…CN013 |
+| `accetta_invito(codice)` | PAZ | Verifica codice e limite, collega il paziente (Attivo) | CN001, CN007, CN008, CN010…CN013 |
+| `elimina_account()` | NUT, PAZ | Cancella dati e account di chi chiama (UC_GA_5) | — |
 | `archivia_paziente(id)` | NUT | Attivo → Archiviato, annulla le visite future (UC_GI_4) | CN007 |
 | `riattiva_paziente(id)` | NUT | Archiviato → Attivo se il piano lo consente; non se il paziente si è scollegato da solo | CN001, CN007, CN008, CN009 |
 | `scollega_paziente()` | PAZ | Il paziente interrompe il collegamento (UC_GI_5); nel Free resta contato | CN007 |
 | `prenota_visita(inizio)` | PAZ | Verifica finestra, disponibilità, allineamento allo slot, una sola visita futura e slot libero (RNF_A_6) | CN003, CN004, CN005, CN007 |
 | `annulla_visita(id)` | PAZ | Annulla fino a 24 ore prima (RF_GV_9, costante `ore_minime_annullamento()`) | CN006, CN007 |
 
-Le funzioni di supporto alle policy stanno nello schema `privato`, non esposto dall'API. Il **Security Advisor** di Supabase segnala solo le 9 RPC qui sopra come "eseguibili da utenti autenticati": è il comportamento voluto.
+Le funzioni di supporto alle policy stanno nello schema `privato`, non esposto dall'API. Il **Security Advisor** di Supabase segnala solo le RPC qui sopra come "eseguibili da utenti autenticati" (e `verifica_invito` anche da anonimi): è il comportamento voluto.
 
 ## Da completare in fase 6
 

@@ -1,8 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
-import 'package:cenato/core/dipendenze.dart';
-import 'package:cenato/data/finto/auth_repository_finto.dart';
+import 'package:cenato/data/finto/dipendenze_finte.dart';
 import 'package:cenato/data/finto/pazienti_repository_finto.dart';
 import 'package:cenato/domain/modelli/paziente.dart';
 import 'package:cenato/domain/modelli/piano.dart';
@@ -13,16 +12,12 @@ import 'package:cenato/main.dart';
 /// Flussi delle schermate con dati finti (nessun database).
 void main() {
   Future<DatiFinti> avviaNut(WidgetTester tester, DatiFinti dati) async {
-    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.physicalSize = const Size(1080, 4200);
     tester.view.devicePixelRatio = 2.5;
     addTearDown(tester.view.reset);
     await tester.pumpWidget(
       CenatoApp(
-        dip: Dipendenze(
-          auth: AuthRepositoryFinto(ruoloIniziale: Ruolo.nutrizionista),
-          pazienti: PazientiRepositoryFinto(dati),
-          abbonamento: AbbonamentoRepositoryFinto(dati),
-        ),
+        dip: DipendenzeFinte(ruolo: Ruolo.nutrizionista, dati: dati).dip,
       ),
     );
     await tester.pumpAndSettle();

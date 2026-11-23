@@ -6,9 +6,10 @@ import 'core/costanti/testi.dart';
 import 'core/dipendenze.dart';
 import 'core/router/router.dart';
 import 'core/tema/tema.dart';
-import 'data/finto/auth_repository_finto.dart';
-import 'data/finto/pazienti_repository_finto.dart';
+import 'data/finto/dipendenze_finte.dart';
+import 'data/supabase/collegamento_repository_supabase.dart';
 import 'data/supabase/pazienti_repository_supabase.dart';
+import 'data/supabase/profilo_repository_supabase.dart';
 import 'data/supabase/supabase_auth_repository.dart';
 import 'data/supabase/supabase_service.dart';
 import 'domain/modelli/profilo.dart';
@@ -25,16 +26,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   if (_ruoloFinto.isNotEmpty) {
-    final dati = DatiFinti();
-    runApp(
-      CenatoApp(
-        dip: Dipendenze(
-          auth: AuthRepositoryFinto(ruoloIniziale: Ruolo.daDb(_ruoloFinto)),
-          pazienti: PazientiRepositoryFinto(dati),
-          abbonamento: AbbonamentoRepositoryFinto(dati),
-        ),
-      ),
-    );
+    runApp(CenatoApp(dip: DipendenzeFinte(ruolo: Ruolo.daDb(_ruoloFinto)).dip));
     return;
   }
 
@@ -58,12 +50,15 @@ Future<void> main() async {
   }
 
   final db = SupabaseService.client;
+  final auth = SupabaseAuthRepository(db);
   runApp(
     CenatoApp(
       dip: Dipendenze(
-        auth: SupabaseAuthRepository(db),
+        auth: auth,
         pazienti: PazientiRepositorySupabase(db),
         abbonamento: AbbonamentoRepositorySupabase(db),
+        collegamento: CollegamentoRepositorySupabase(db),
+        profilo: ProfiloRepositorySupabase(db, auth),
       ),
     ),
   );

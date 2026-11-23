@@ -57,6 +57,10 @@ class PazientiRepositoryFinto extends PazientiRepository {
 
   final DatiFinti dati;
 
+  /// Chiamato quando il paziente interrompe il collegamento (la dipendenza
+  /// finta lo collega all'autenticazione finta).
+  void Function()? alScollegamento;
+
   @override
   Future<List<PazienteElenco>> elencoPazienti() async => List.of(dati.pazienti);
 
@@ -130,7 +134,10 @@ class PazientiRepositoryFinto extends PazientiRepository {
   }
 
   @override
-  Future<void> scollegati() async => notifyListeners();
+  Future<void> scollegati() async {
+    alScollegamento?.call();
+    notifyListeners();
+  }
 }
 
 class AbbonamentoRepositoryFinto extends AbbonamentoRepository {

@@ -3,9 +3,8 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:cenato/core/router/rotte.dart';
 import 'package:cenato/core/router/router.dart';
-import 'package:cenato/core/dipendenze.dart';
 import 'package:cenato/data/finto/auth_repository_finto.dart';
-import 'package:cenato/data/finto/pazienti_repository_finto.dart';
+import 'package:cenato/data/finto/dipendenze_finte.dart';
 import 'package:cenato/domain/modelli/profilo.dart';
 import 'package:cenato/main.dart';
 
@@ -13,24 +12,18 @@ import 'package:cenato/main.dart';
 /// navigazione con ruolo simulato (AuthRepositoryFinto, nessun database).
 void main() {
   Future<AuthRepositoryFinto> avvia(WidgetTester tester, {Ruolo? ruolo}) async {
-    final auth = AuthRepositoryFinto(ruoloIniziale: ruolo);
-    final dati = DatiFinti();
-    await tester.pumpWidget(
-      CenatoApp(
-        dip: Dipendenze(
-          auth: auth,
-          pazienti: PazientiRepositoryFinto(dati),
-          abbonamento: AbbonamentoRepositoryFinto(dati),
-        ),
-      ),
-    );
+    tester.view.physicalSize = const Size(1080, 4200);
+    tester.view.devicePixelRatio = 2.5;
+    addTearDown(tester.view.reset);
+    final finte = DipendenzeFinte(ruolo: ruolo);
+    await tester.pumpWidget(CenatoApp(dip: finte.dip));
     await tester.pumpAndSettle();
-    return auth;
+    return finte.auth;
   }
 
   testWidgets('senza sessione mostra l\'accesso', (tester) async {
     await avvia(tester);
-    expect(find.text('Cenato · accesso di prova'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Accedi'), findsOneWidget);
   });
 
   testWidgets('il paziente arriva su Oggi e naviga tra le 4 sezioni', (
@@ -97,7 +90,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(FilledButton, 'Esci'));
     await tester.pumpAndSettle();
-    expect(find.text('Cenato · accesso di prova'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Accedi'), findsOneWidget);
   });
 
   group('reindirizza (guard)', () {

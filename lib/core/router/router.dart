@@ -4,20 +4,24 @@ import 'package:material_ui/material_ui.dart';
 import '../../domain/modelli/profilo.dart';
 import '../../domain/repository/auth_repository.dart';
 import '../dipendenze.dart';
-import '../../presentation/auth/prova_auth_page.dart';
-import '../../presentation/auth/segnaposto_auth.dart';
+import '../../presentation/auth/accesso_page.dart';
+import '../../presentation/auth/nuova_password_page.dart';
+import '../../presentation/auth/recupero_password_page.dart';
+import '../../presentation/auth/registrazione_page.dart';
+import '../../presentation/comuni/elimina_account_page.dart';
 import '../../presentation/comuni/profilo_page.dart';
 import '../../presentation/comuni/stati_view.dart';
 import '../../presentation/nutrizionista/calendario_page.dart';
+import '../../presentation/nutrizionista/disponibilita_page.dart';
 import '../../presentation/nutrizionista/invito_page.dart';
 import '../../presentation/nutrizionista/nutrizionista_shell.dart';
 import '../../presentation/nutrizionista/pazienti_page.dart';
 import '../../presentation/paziente/andamento_page.dart';
+import '../../presentation/paziente/collegamento_page.dart';
 import '../../presentation/paziente/dieta_page.dart';
 import '../../presentation/paziente/oggi_page.dart';
 import '../../presentation/paziente/paziente_shell.dart';
 import '../../presentation/paziente/visite_page.dart';
-import '../costanti/testi.dart';
 import 'rotte.dart';
 
 /// Home del ruolo dopo l'accesso (UC_GA_2, passo 6): Oggi per il paziente,
@@ -37,11 +41,41 @@ String? reindirizza(AuthRepository auth, String percorso) {
   final ruolo = auth.ruolo;
   final pubblica = Rotte.pubbliche.contains(percorso);
 
+  // Dal link di recupero si entra con una sessione di recupero: si resta sulla
+  // scelta della nuova password finché non è salvata (UC_GA_4, passo 5).
+  if (auth.inRecuperoPassword) {
+    return percorso == Rotte.nuovaPassword ? null : Rotte.nuovaPassword;
+  }
+  if (percorso == Rotte.nuovaPassword) {
+    return ruolo == null ? Rotte.accesso : homeDelRuolo(ruolo);
+  }
+
   // Senza sessione si vedono solo le schermate pubbliche.
   if (ruolo == null) return pubblica ? null : Rotte.accesso;
 
+  // Paziente non collegato: può solo inserire il codice di invito (UC_GI_2)
+  // o uscire dal profilo. Succede dopo la registrazione con email da
+  // confermare e dopo uno scollegamento.
+  if (ruolo == Ruolo.paziente && !auth.collegato) {
+    return percorso == Rotte.pazienteCollegamento ||
+            percorso == Rotte.pazienteProfilo ||
+            percorso == Rotte.eliminaAccount
+        ? null
+        : Rotte.pazienteCollegamento;
+  }
+
+  // Nutrizionista appena registrato: passo "disponibilità" (UC_GA_1, passo 8).
+  if (ruolo == Ruolo.nutrizionista && auth.primoAccesso) {
+    return percorso == Rotte.nutDisponibilita ? null : Rotte.nutDisponibilita;
+  }
+
   final home = homeDelRuolo(ruolo);
-  if (pubblica || percorso == Rotte.caricamento || percorso == '/') return home;
+  if (pubblica ||
+      percorso == Rotte.caricamento ||
+      percorso == '/' ||
+      percorso == Rotte.pazienteCollegamento) {
+    return home;
+  }
 
   // Ogni ruolo resta nella propria area.
   if (percorso.startsWith('/paziente') && ruolo != Ruolo.paziente) return home;
@@ -68,26 +102,19 @@ GoRouter creaRouter(Dipendenze dip) {
       // ------------------------------------------------ pubbliche
       GoRoute(
         path: Rotte.accesso,
-        builder: (context, stato) => ProvaAuthPage(auth: auth),
+        builder: (context, stato) => AccessoPage(dip: dip),
       ),
       GoRoute(
         path: Rotte.registrazione,
-        builder: (context, stato) => const SegnapostoAuthPage(
-          titolo: Testi.registrazione,
-          descrizione:
-              'La registrazione con scelta del ruolo, codice di invito e '
-              'consenso al trattamento dei dati sanitari arriva nella fase 1 '
-              '(UC_GA_1). Per ora usa l\'accesso di prova.',
-        ),
+        builder: (context, stato) => RegistrazionePage(dip: dip),
       ),
       GoRoute(
         path: Rotte.recuperoPassword,
-        builder: (context, stato) => const SegnapostoAuthPage(
-          titolo: Testi.recuperoPassword,
-          descrizione:
-              'Il recupero della password via email arriva nella fase 1 '
-              '(UC_GA_4).',
-        ),
+        builder: (context, stato) => RecuperoPasswordPage(dip: dip),
+      ),
+      GoRoute(
+        path: Rotte.nuovaPassword,
+        builder: (context, stato) => NuovaPasswordPage(dip: dip),
       ),
 
       // ------------------------------------------------ paziente
@@ -130,12 +157,24 @@ GoRouter creaRouter(Dipendenze dip) {
         ],
       ),
       GoRoute(
+        path: Rotte.eliminaAccount,
+        builder: (context, stato) => EliminaAccountPage(dip: dip),
+      ),
+      GoRoute(
+        path: Rotte.pazienteCollegamento,
+        builder: (context, stato) => CollegamentoPage(dip: dip),
+      ),
+      GoRoute(
         path: Rotte.pazienteProfilo,
         builder: (context, stato) =>
             ProfiloPage(dip: dip, mostraIndietro: true),
       ),
 
       // ------------------------------------------------ nutrizionista
+      GoRoute(
+        path: Rotte.nutDisponibilita,
+        builder: (context, stato) => DisponibilitaPage(dip: dip),
+      ),
       StatefulShellRoute.indexedStack(
         builder: (context, stato, navigazione) =>
             NutrizionistaShell(navigazione: navigazione),

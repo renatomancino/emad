@@ -1,4 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Supabase e Open Food Facts: senza questo permesso l'APK di release non ha rete. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="cenato"
         android:name="${applicationName}"
@@ -23,6 +25,15 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+            <!-- Rientro dal link di reimpostazione password (UC_GA_4): schema
+                 it.unisa.cenato://login-callback, da inserire anche tra i
+                 Redirect URLs di Supabase (docs/supabase.md). -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="it.unisa.cenato" android:host="login-callback"/>
             </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.

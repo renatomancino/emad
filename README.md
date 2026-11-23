@@ -92,12 +92,13 @@ Il codice è organizzato a livelli (RNF_S_1): presentazione, logica (domain), da
 ├─ docs/
 │  ├─ rad/                    RAD in Markdown (01…11, README.md, img/)
 │  ├─ registro-decisioni.md   decisioni con motivazione
+│  ├─ decisioni-sviluppo.md   scelte prese durante lo sviluppo (non nel RAD)
 │  ├─ supabase.md             come configurare Supabase (regione UE, auth, migrazioni, pausa)
 │  ├─ schema.md               schema del database (ER in Mermaid, tabelle, vincoli)
 │  ├─ test-rls.md             esito dei test delle policy di accesso
 │  └─ demo-dati.md            account e dati della demo, come rigenerarli
 ├─ supabase/
-│  ├─ migrations/             000_profili.sql … 003_abbonamento.sql (in ordine)
+│  ├─ migrations/             000_profili.sql … 005_elimina_account.sql (in ordine)
 │  ├─ tests/                  test SQL di vincoli e RLS (non lasciano dati)
 │  └─ seed.sql                dati di prova fittizi + reset (rieseguibile)
 ├─ lib/
@@ -108,7 +109,7 @@ Il codice è organizzato a livelli (RNF_S_1): presentazione, logica (domain), da
 │  │  ├─ router/              navigazione (go_router) con home e aree per ruolo
 │  │  └─ costanti/            testi in italiano e costanti in un solo punto
 │  ├─ presentation/           schermate e widget
-│  │  ├─ auth/                accesso (provvisorio), registrazione, recupero password
+│  │  ├─ auth/                accesso, registrazione (3 passi, consenso GDPR), recupero e nuova password
 │  │  ├─ paziente/            barra con Oggi, Dieta, Andamento, Visite
 │  │  ├─ nutrizionista/       barra con Pazienti, Calendario, Profilo e abbonamento
 │  │  └─ comuni/              caricamento, stato vuoto, errore con Riprova, pulsanti, campi, profilo

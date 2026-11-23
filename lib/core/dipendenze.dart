@@ -1,5 +1,7 @@
 import '../domain/repository/auth_repository.dart';
+import '../domain/repository/collegamento_repository.dart';
 import '../domain/repository/pazienti_repository.dart';
+import '../domain/repository/profilo_repository.dart';
 
 /// Repository usati dalle schermate. Creati in main.dart (Supabase o finti)
 /// e passati al router: le schermate non conoscono Supabase.
@@ -8,9 +10,13 @@ class Dipendenze {
     required this.auth,
     required this.pazienti,
     required this.abbonamento,
+    required this.collegamento,
+    required this.profilo,
   });
 
   final AuthRepository auth;
   final PazientiRepository pazienti;
   final AbbonamentoRepository abbonamento;
+  final CollegamentoRepository collegamento;
+  final ProfiloRepository profilo;
 }

@@ -24,14 +24,15 @@ In **Authentication → Sign In / Providers**:
 
 In **Authentication → URL Configuration**:
 
-- **Site URL**: per ora lascia il valore predefinito. Quando la fase 1 aggiungerà il deep link dell'app (es. `it.unisa.cenato://auth`), inseriscilo qui e tra i **Redirect URLs**: lo useranno i link di conferma email e di reimpostazione password (UC_GA_4).
+- **Redirect URLs**: aggiungi `it.unisa.cenato://login-callback`. È il deep link registrato in `AndroidManifest.xml`: lo usano i link di conferma email e di reimpostazione password (UC_GA_1, UC_GA_4). **Senza questa voce il link nella email non riapre l'app** e Supabase ripiega sul Site URL.
+- **Site URL**: lascia il valore predefinito (l'app è mobile, non c'è un sito).
 
 In **Authentication → Emails**:
 
 - Il servizio email integrato è pensato solo per le prove: ha un limite di pochi invii all'ora. Per la demo bastano gli account di prova già confermati (vedi `docs/demo-dati.md`). Per un uso reale serve un SMTP proprio (*Authentication → Emails → SMTP Settings*).
 - I testi delle email (conferma, reset password) si possono tradurre in italiano da *Email Templates*.
 
-> Il **reset password** funziona già con l'email integrata: l'app chiama `resetPasswordForEmail` (UC_GA_4). La schermata per inserire la nuova password arriva nella fase 1.
+> Il **reset password** funziona con l'email integrata: l'app chiama `resetPasswordForEmail` (UC_GA_4); il link riapre l'app (deep link sopra) sulla schermata "Nuova password". Con "Confirm email" attivo, anche la registrazione manda una email: l'utente la apre dal telefono per confermare l'account. Il servizio integrato ha un limite orario di invii: se compare l'errore 429 ("troppe richieste") basta attendere.
 
 ## 3. Eseguire le migrazioni
 
@@ -43,6 +44,8 @@ Le migrazioni sono in `supabase/migrations/` e vanno eseguite **in ordine**:
 | `001_schema.sql` | Tutte le tabelle del Class Diagram, enum e vincoli | Schema del database |
 | `002_rls.sql` | Row Level Security, policy per ruolo e funzioni RPC | Policy RLS per ruolo |
 | `003_abbonamento.sql` | Regola dei posti occupati in un solo punto, stato dell'abbonamento, cambio piano simulato | Piani Free/Start/Pro, limiti e abbonamento simulato |
+| `004_account_inviti.sql` | Consenso GDPR obbligatorio e versione dell'informativa alla registrazione; verifica del codice di invito prima di registrarsi (`verifica_invito`, anche da non autenticati) con errori distinti CN010…CN013; `accetta_invito` rinnovata | Registrazione con ruolo e consenso, Accettazione invito |
+| `005_elimina_account.sql` | `elimina_account()`: cancella i dati clinici e l'account (art. 17 GDPR) | Profilo ed eliminazione account |
 
 Due modi:
 
@@ -64,8 +67,8 @@ Scrivile nel file `.env` sulla radice del progetto (creato da `.env.example`). I
 
 ## 5. Come funziona il ruolo
 
-1. L'app registra l'utente con `supabase.auth.signUp(..., data: {'ruolo': 'nutrizionista' | 'paziente', 'nome': ...})`.
-2. Il trigger `su_nuovo_utente_crea_profilo` su `auth.users` crea la riga in `profili` con quel ruolo. Senza un ruolo valido la registrazione fallisce.
+1. L'app registra l'utente con `supabase.auth.signUp(..., data: {'ruolo': 'nutrizionista' | 'paziente', 'nome': ..., 'consenso_dati': true, 'versione_informativa': '1.0', 'codice_invito': ...})`.
+2. Il trigger `su_nuovo_utente_crea_profilo` su `auth.users` crea la riga in `profili` con quel ruolo e salva data e versione del consenso. Senza un ruolo valido **o senza il consenso** la registrazione fallisce anche se si aggira l'app (GDPR art. 9).
 3. Il trigger `profili_ruolo_immutabile` impedisce di cambiare il ruolo dopo la creazione, anche dal pannello: per un ruolo diverso serve un nuovo account.
 4. L'app legge il ruolo da `profili` dopo il login e apre la home corrispondente (UC_GA_2, passo 5).
 

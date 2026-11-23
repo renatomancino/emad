@@ -19,9 +19,9 @@ declare
 begin
   -- Utenti: il trigger crea profili e, per il nutrizionista, piano Free.
   insert into auth.users (id, email, raw_user_meta_data) values
-    (nut,  'test.nut@vincoli.local',  '{"ruolo":"nutrizionista","nome":"Nut Test"}'),
-    (nut2, 'test.nut2@vincoli.local', '{"ruolo":"nutrizionista","nome":"Nut Due"}'),
-    (paz_u,'test.paz@vincoli.local',  '{"ruolo":"paziente","nome":"Paz Test"}');
+    (nut,  'test.nut@vincoli.local',  '{"consenso_dati":true,"ruolo":"nutrizionista","nome":"Nut Test"}'),
+    (nut2, 'test.nut2@vincoli.local', '{"consenso_dati":true,"ruolo":"nutrizionista","nome":"Nut Due"}'),
+    (paz_u,'test.paz@vincoli.local',  '{"consenso_dati":true,"ruolo":"paziente","nome":"Paz Test"}');
 
   insert into esiti (prova, esito) select 'Profilo e piano Free creati alla registrazione',
     case when (select piano_abbonamento from public.nutrizionisti where id = nut) = 'free'
@@ -42,6 +42,18 @@ begin
   exception when invalid_parameter_value then
     insert into esiti (prova, esito) values ('Registrazione senza ruolo rifiutata', 'OK');
   end;
+
+  -- Senza consenso esplicito la registrazione è rifiutata (RF_GA_6, RNF_L_1)
+  begin
+    insert into auth.users (id, email, raw_user_meta_data)
+      values (gen_random_uuid(), 'senza.consenso@vincoli.local', '{"ruolo":"paziente","nome":"X"}');
+    insert into esiti (prova, esito) values ('Registrazione senza consenso rifiutata', 'KO');
+  exception when invalid_parameter_value then
+    insert into esiti (prova, esito) values ('Registrazione senza consenso rifiutata', 'OK');
+  end;
+  insert into esiti (prova, esito) select 'Data e versione del consenso registrate',
+    case when (select consenso_dati_il is not null and versione_informativa = '1.0' from public.profili where id = paz_u)
+         then 'OK' else 'KO' end;
 
   insert into public.pazienti (nutrizionista_id, utente_id, stato, data_collegamento)
     values (nut, paz_u, 'attivo', now()) returning id into paz;
