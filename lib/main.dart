@@ -1,8 +1,20 @@
-import 'package:flutter/foundation.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/config/env.dart';
+import 'core/costanti/testi.dart';
+import 'core/router/router.dart';
+import 'core/tema/tema.dart';
+import 'data/finto/auth_repository_finto.dart';
+import 'data/supabase/supabase_auth_repository.dart';
+import 'data/supabase/supabase_service.dart';
+import 'domain/modelli/profilo.dart';
+import 'domain/repository/auth_repository.dart';
+import 'presentation/comuni/errore_configurazione_page.dart';
+
+/// Ruolo simulato per provare la navigazione senza Supabase:
+/// `flutter run --dart-define=CENATO_RUOLO_FINTO=paziente` (o `nutrizionista`).
+const _ruoloFinto = String.fromEnvironment('CENATO_RUOLO_FINTO');
 
 /// Punto di ingresso: legge `.env`, inizializza Supabase e avvia l'app.
 /// Se la configurazione non è valida mostra un messaggio chiaro invece
@@ -10,141 +22,80 @@ import 'core/config/env.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  String? erroreConfigurazione;
+  if (_ruoloFinto.isNotEmpty) {
+    runApp(
+      CenatoApp(
+        auth: AuthRepositoryFinto(ruoloIniziale: Ruolo.daDb(_ruoloFinto)),
+      ),
+    );
+    return;
+  }
+
   try {
     final config = await EnvConfig.load();
-    // supabase_flutter 2.18 chiama "publishableKey" la chiave pubblica:
-    // accetta sia la chiave anon (JWT) sia il nuovo formato sb_publishable_.
-    await Supabase.initialize(
-      url: config.supabaseUrl,
-      publishableKey: config.supabaseAnonKey,
-    );
+    await SupabaseService.inizializza(config);
   } on EnvConfigException catch (e) {
-    erroreConfigurazione = e.message;
+    runApp(CenatoErroreApp(messaggio: e.message));
+    return;
   } catch (e) {
     // Nessun dato sanitario qui: si registra solo il tipo di errore.
     debugPrint('Inizializzazione di Supabase non riuscita: ${e.runtimeType}');
-    erroreConfigurazione =
-        'Impossibile collegarsi a Supabase.\n'
-        'Controlla SUPABASE_URL e SUPABASE_ANON_KEY nel file .env.';
+    runApp(
+      const CenatoErroreApp(
+        messaggio:
+            'Impossibile collegarsi a Supabase.\n'
+            'Controlla SUPABASE_URL e SUPABASE_ANON_KEY nel file .env.',
+      ),
+    );
+    return;
   }
 
-  runApp(CenatoApp(erroreConfigurazione: erroreConfigurazione));
+  runApp(CenatoApp(auth: SupabaseAuthRepository(SupabaseService.client)));
 }
 
-/// Radice dell'app. Tema e router arriveranno in `lib/core`.
-class CenatoApp extends StatelessWidget {
-  const CenatoApp({super.key, this.erroreConfigurazione});
+/// Radice dell'app: tema e router con reindirizzamento per ruolo.
+class CenatoApp extends StatefulWidget {
+  const CenatoApp({super.key, required this.auth});
 
-  /// Messaggio da mostrare se `.env` manca o non è valido; `null` se è tutto ok.
-  final String? erroreConfigurazione;
+  final AuthRepository auth;
+
+  @override
+  State<CenatoApp> createState() => _CenatoAppState();
+}
+
+class _CenatoAppState extends State<CenatoApp> {
+  late final GoRouter _router = creaRouter(widget.auth);
+
+  @override
+  void dispose() {
+    _router.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final errore = erroreConfigurazione;
-    return MaterialApp(
-      title: 'Cenato',
+    return MaterialApp.router(
+      title: Testi.nomeApp,
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
-      ),
-      home: errore == null
-          ? const SchermataProva()
-          : SchermataErroreConfigurazione(messaggio: errore),
+      theme: temaCenato(),
+      routerConfig: _router,
     );
   }
 }
 
-/// Schermata provvisoria di avvio: conferma che l'app parte ed è collegata.
-class SchermataProva extends StatelessWidget {
-  const SchermataProva({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final testo = Theme.of(context).textTheme;
-    return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.restaurant,
-                  size: 64,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                const SizedBox(height: 16),
-                Text('Cenato', style: testo.displaySmall),
-                const SizedBox(height: 8),
-                Text(
-                  'Il tuo percorso nutrizionale, pasto dopo pasto.',
-                  style: testo.bodyLarge,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  'Configurazione caricata: app pronta.',
-                  style: testo.bodySmall,
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Mostrata quando `.env` manca o non è valido.
-class SchermataErroreConfigurazione extends StatelessWidget {
-  const SchermataErroreConfigurazione({super.key, required this.messaggio});
+/// App minima mostrata quando `.env` manca o non è valido.
+class CenatoErroreApp extends StatelessWidget {
+  const CenatoErroreApp({super.key, required this.messaggio});
 
   final String messaggio;
 
   @override
   Widget build(BuildContext context) {
-    final testo = Theme.of(context).textTheme;
-    return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.settings_outlined,
-                  size: 64,
-                  color: Theme.of(context).colorScheme.error,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Configurazione mancante',
-                  style: testo.headlineSmall,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  messaggio,
-                  style: testo.bodyLarge,
-                  textAlign: TextAlign.center,
-                ),
-                if (kDebugMode) ...[
-                  const SizedBox(height: 24),
-                  Text(
-                    'Istruzioni nel README.md del repository.',
-                    style: testo.bodySmall,
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ),
+    return MaterialApp(
+      title: Testi.nomeApp,
+      debugShowCheckedModeBanner: false,
+      theme: temaCenato(),
+      home: SchermataErroreConfigurazione(messaggio: messaggio),
     );
   }
 }

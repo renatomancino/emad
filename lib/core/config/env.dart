@@ -47,10 +47,7 @@ class EnvConfig {
     final url = env[keyUrl]?.trim() ?? '';
     final anonKey = env[keyAnonKey]?.trim() ?? '';
 
-    final mancanti = [
-      if (url.isEmpty) keyUrl,
-      if (anonKey.isEmpty) keyAnonKey,
-    ];
+    final mancanti = [if (url.isEmpty) keyUrl, if (anonKey.isEmpty) keyAnonKey];
     if (mancanti.isNotEmpty) {
       throw EnvConfigException(
         'Nel file .env manca: ${mancanti.join(', ')}.\n'

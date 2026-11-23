@@ -14,18 +14,9 @@ String _jwt(String role) {
 
 void main() {
   group('Avvio dell\'app', () {
-    testWidgets('mostra il nome Cenato con configurazione valida', (
-      tester,
-    ) async {
-      await tester.pumpWidget(const CenatoApp());
-
-      expect(find.text('Cenato'), findsOneWidget);
-      expect(find.text('Configurazione caricata: app pronta.'), findsOneWidget);
-    });
-
     testWidgets('mostra un messaggio chiaro se .env manca', (tester) async {
       await tester.pumpWidget(
-        const CenatoApp(erroreConfigurazione: 'File .env non trovato.'),
+        const CenatoErroreApp(messaggio: 'File .env non trovato.'),
       );
 
       expect(find.text('Configurazione mancante'), findsOneWidget);

@@ -60,7 +60,19 @@ flutter run
 ```
 
 Con più dispositivi collegati: `flutter devices` e poi `flutter run -d <id>`.
-Se tutto è configurato, compare la schermata di prova con il nome **Cenato**.
+Se tutto è configurato compare la schermata di **accesso di prova**: entra con un account demo (`docs/demo-dati.md`, es. `giulia@example.com` o `marco@example.com`, password `CenatoDemo2026!`). L'app apre la home del ruolo: *Pazienti* per il nutrizionista, *Oggi* per il paziente.
+
+**Solo navigazione, senza Supabase**: per provare le schermate con un ruolo simulato (nessun dato reale):
+
+```bash
+flutter run --dart-define=CENATO_RUOLO_FINTO=paziente
+```
+
+oppure `--dart-define=CENATO_RUOLO_FINTO=nutrizionista`.
+
+### 4. Back-end Supabase (una volta per progetto)
+
+Il progetto Supabase del gruppo è già configurato. Per rifarlo da zero (nuovo progetto, migrazioni, dati di prova) segui `docs/supabase.md`; per i dati della demo `docs/demo-dati.md`.
 
 ### Comandi utili
 
@@ -79,27 +91,34 @@ Il codice è organizzato a livelli (RNF_S_1): presentazione, logica (domain), da
 ├─ CLAUDE.md                  contesto per lo sviluppo (non modificare senza accordo)
 ├─ docs/
 │  ├─ rad/                    RAD in Markdown (01…11, README.md, img/)
-│  └─ registro-decisioni.md   decisioni con motivazione
+│  ├─ registro-decisioni.md   decisioni con motivazione
+│  ├─ supabase.md             come configurare Supabase (regione UE, auth, migrazioni, pausa)
+│  ├─ schema.md               schema del database (ER in Mermaid, tabelle, vincoli)
+│  ├─ test-rls.md             esito dei test delle policy di accesso
+│  └─ demo-dati.md            account e dati della demo, come rigenerarli
 ├─ supabase/
-│  ├─ migrations/             migrazioni SQL: 001_schema.sql, 002_rls.sql, ...
-│  └─ seed.sql                dati di prova, solo fittizi
+│  ├─ migrations/             000_profili.sql, 001_schema.sql, 002_rls.sql (in ordine)
+│  ├─ tests/                  test SQL di vincoli e RLS (non lasciano dati)
+│  └─ seed.sql                dati di prova fittizi + reset (rieseguibile)
 ├─ lib/
-│  ├─ main.dart               avvio: legge .env, inizializza Supabase
+│  ├─ main.dart               avvio: legge .env, inizializza Supabase, tema e router
 │  ├─ core/
 │  │  ├─ config/              lettura e controllo di .env
-│  │  ├─ tema/                tema grafico
-│  │  ├─ router/              navigazione (go_router)
-│  │  └─ costanti/            costanti modificabili in un solo punto (soglie, limiti)
+│  │  ├─ tema/                tema grafico (colori dei mock-up, tocchi da 48 dp)
+│  │  ├─ router/              navigazione (go_router) con home e aree per ruolo
+│  │  └─ costanti/            testi in italiano e costanti in un solo punto
 │  ├─ presentation/           schermate e widget
-│  │  ├─ auth/                accesso, registrazione, consenso
-│  │  ├─ paziente/            Oggi, Dieta, Andamento, Visite
-│  │  ├─ nutrizionista/       Pazienti, Calendario, Profilo e abbonamento
-│  │  └─ comuni/              widget condivisi
-│  ├─ domain/                 modelli e regole, senza dipendenze da Flutter o Supabase
-│  │  ├─ modelli/
+│  │  ├─ auth/                accesso (provvisorio), registrazione, recupero password
+│  │  ├─ paziente/            barra con Oggi, Dieta, Andamento, Visite
+│  │  ├─ nutrizionista/       barra con Pazienti, Calendario, Profilo e abbonamento
+│  │  └─ comuni/              caricamento, stato vuoto, errore con Riprova, pulsanti, campi, profilo
+│  ├─ domain/                 modelli, regole e interfacce, senza dipendenze da Supabase
+│  │  ├─ modelli/             Profilo, Ruolo
+│  │  ├─ repository/          interfacce (es. AuthRepository)
 │  │  └─ regole/              aderenza, semaforo, limiti del piano
 │  └─ data/                   accesso ai dati
-│     ├─ supabase/            tabelle, auth, RLS
+│     ├─ supabase/            client Supabase e autenticazione
+│     ├─ finto/               implementazioni finte per test e ruolo simulato
 │     └─ open_food_facts/     ricerca alimenti e barcode
 ├─ test/                      test automatici
 ├─ android/                   progetto Android generato da Flutter
