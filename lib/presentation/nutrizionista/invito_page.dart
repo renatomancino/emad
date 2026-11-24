@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../core/dipendenze.dart';
 import '../../core/router/rotte.dart';
@@ -79,6 +80,18 @@ class _InvitoPageState extends State<InvitoPage> {
     );
   }
 
+  /// Apre il foglio di condivisione di sistema (WhatsApp, SMS, email...).
+  /// Se non è disponibile (es. alcuni browser) si ripiega sulla copia.
+  Future<void> _condividi(Invito i) async {
+    try {
+      await SharePlus.instance.share(
+        ShareParams(text: _testoInvito(i), subject: 'Invito a Cenato'),
+      );
+    } catch (_) {
+      await _copia(i);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final testo = Theme.of(context).textTheme;
@@ -149,8 +162,13 @@ class _InvitoPageState extends State<InvitoPage> {
             ),
             const SizedBox(height: 16),
             PulsantePrimario(
-              etichetta: 'Copia il messaggio',
+              etichetta: 'Condividi',
+              onPressed: () => _condividi(invito),
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton(
               onPressed: () => _copia(invito),
+              child: const Text('Copia il messaggio'),
             ),
             const SizedBox(height: 8),
             OutlinedButton(
