@@ -201,3 +201,24 @@ Script: `supabase/tests/piano_salva.sql`, come gli altri in una transazione annu
 | NUT B, PAZ B1 | Non vedono i piani di altri | 0 |
 | NUT A | Una versione assegnata non si modifica a mano | 0 |
 
+## Modelli e alternative
+
+Script: `supabase/tests/modelli_alternative.sql` (transazione annullata). Requisiti: RF_GP_6, RF_GP_9, RF_GD_2; SD_1. Richiede la `008`.
+
+- **Esito**: **32 controlli su 32 OK** su PostgreSQL 16 locale (25/11/2026) **e sul progetto Supabase del gruppo** (`eu-west-1`, Postgres 17), dove si è lanciato anche `piano_salva.sql`: **37 su 37 OK**. Sul progetto gli script sono stati eseguiti in una transazione annullata da un errore finale con il riepilogo; dopo restano 9 utenti, 5 piani (tutti alla versione 1), 175 alternative e 0 modelli, nessun utente di prova.
+- **Il test sa fallire**: con la policy `modelli_piano_nut` sostituita da `using (true)` cadono 7 controlli.
+- **Come si ripete**: SQL Editor → incolla il file → *Run* (ogni riga `OK`).
+
+| Utente | Prova | Atteso |
+|---|---|---|
+| NUT A | Salva un pasto e un piano come modello; non li salva a nome di un altro | ok / violazione RLS |
+| PAZ A1, anonimo | Non creano né leggono modelli | negato |
+| NUT A | Nome vuoto o di 121 caratteri, tipo sconosciuto, contenuto mancante | 23514 / 22P02 / 23502 |
+| NUT B | Non vede, non modifica e non elimina i modelli di A | 0 |
+| NUT A | Elimina un proprio modello | 1 |
+| PAZ A1 | Vede le alternative del pasto (solo quelle) e del proprio piano; non quelle di una bozza | 1 / 2 |
+| PAZ B1, NUT B | Non vedono le alternative di altri | 0 |
+| PAZ A1, NUT A | Non aggiungono né eliminano alternative a mano su una versione assegnata | negato |
+| PAZ A1 | Check-in con un'alternativa del pasto; con quella di un altro pasto; "Alternativa" senza scegliere | ok / 23514 / 23514 |
+| NUT A | Nuova versione con due alternative per una voce; il check-in vecchio resta valido | ok |
+

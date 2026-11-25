@@ -175,3 +175,36 @@ Come per gli obiettivi, finché non c'è il dettaglio paziente (Fase 3) il pulsa
 - **Notifiche:** il punto di aggancio per "nuovo piano" è in fondo a `salva_piano` (commento `>>> Aggancio notifica`) e in `PianiRepository.salva`.
 - **Importazione CSV (MC):** costruisce un `PianoAlimentare` e lo passa a `PianiRepository.salva`.
 
+## Alternative, giorno tipo con copia, pasti salvati e modelli (RF_GP_6, RF_GP_9, RF_GP_13–15; UC_GP_1, UC_GP_2; SD_1)
+
+Nessuna migrazione nuova: `alternative` e `modelli_piano` esistevano già con le loro RLS, e `salva_piano` (008) accettava già le alternative.
+
+### D24 · Alternative: per voce, solo alimenti, confronto con l'originale
+
+Lo schema le lega alla **voce** (`alternative.voce_id`), non al pasto: ogni voce ha zero o più alternative, e **si scelgono alimenti** (con quantità), mai testo libero. Dal piano, sotto ogni voce c'è "Aggiungi alternativa" / "Alternative (N)" che apre una pagina con l'originale, le alternative ammesse e, per ognuna, il confronto in kcal ("+52 kcal rispetto all'originale"). L'app rifiuta di aggiungere come alternativa l'alimento della voce stessa o uno già presente (non è un vincolo del database). Le alternative **non entrano nei totali** del pasto.
+
+Per il check-in (SD_1) il repository espone `PianiRepository.alternativePerPasto(pastoId)`: le alternative ammesse di un pasto, ognuna con la voce che sostituisce. **`AlternativaAmmessa.id` è il valore di `check_in.alternativa_id`** e il database rifiuta già (23514) un'alternativa che non è tra quelle del pasto. Ogni nuova versione del piano ha **id nuovi** (anche per pasti e voci): i check-in vecchi restano legati alla versione su cui sono stati fatti.
+
+### D25 · Copia del giorno
+
+"Copia lunedì su…" (menu dei giorni) apre l'elenco degli altri giorni con una casella ciascuno e "Tutti gli altri giorni"; ogni giorno dice se è nuovo, vuoto o ha già dei pasti. La copia è **profonda** (pasti, voci, alternative, orari, con chiavi nuove): modificare il giorno copiato non tocca l'originale. I giorni che mancano nel piano vengono creati. **La conferma "Sostituire i pasti?" si chiede solo se la destinazione ha degli alimenti**: un giorno con soli pasti vuoti non perde nulla e non conta come "ha già pasti" (UC_GP_1, passo 6).
+
+### D26 · Pasti salvati e piani modello: copie con istantanea degli alimenti
+
+Un modello vive in `modelli_piano` (solo del nutrizionista proprietario, RLS già provata) con la struttura in JSON. **Gli alimenti sono salvati per intero** (id, nome e valori per 100 g): il modello si apre senza interrogare la cache e **non cambia mai** se il piano di origine cambia. Usarlo inserisce un'altra copia (chiavi nuove). Conseguenze accettate:
+
+- se un alimento personalizzato venisse modificato dopo, l'anteprima del modello userebbe i valori vecchi; al salvataggio del piano `salva_piano` ricalcola da quelli attuali (l'app oggi non ha una modifica degli alimenti);
+- se un alimento non fosse più disponibile, `salva_piano` rifiuta il piano con CN023 e il messaggio lo dice.
+
+Nome del modello: 1–120 caratteri (come il vincolo della tabella). Eliminare un modello non tocca i piani creati con esso. Un piano si salva come modello solo se è completo (senza pasti vuoti). "Parti da un piano modello" è nella schermata di un piano nuovo.
+
+### D27 · Avvisi sopra i fogli
+
+Uno snackbar ancora visibile può coprire il pulsante di un foglio che si apre subito dopo (successo davvero nel test: "Lunedì copiato…" sopra "Copia"). I fogli dell'editor (quantità, copia del giorno, modelli) chiudono gli avvisi aperti prima di mostrarsi.
+
+### Per le altre schede
+
+- **Oggi / check-in (MC):** `alternativePerPasto(pastoId)` dà le uniche scelte del check-in "Alternativa"; salva `AlternativaAmmessa.id` in `check_in.alternativa_id`.
+- **Sezione Dieta (MC):** `PianoSolaLettura` mostra già le alternative di ogni voce.
+- **`Dipendenze` ha il nuovo campo `modelli`** (richiesto): chi la costruisce a mano deve passarlo. `AlternativaPiano` ha ora un `id` facoltativo.
+
