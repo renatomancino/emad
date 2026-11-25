@@ -249,6 +249,7 @@ class _ProfiloPageState extends State<ProfiloPage> {
                       dimensione: 40,
                     ),
                     titolo: 'Disponibilità e durata della visita',
+                    maxRigheTitolo: null,
                     sottotitolo: 'Giorni e orari di ricevimento',
                     trailing: Icon(
                       Icons.chevron_right,

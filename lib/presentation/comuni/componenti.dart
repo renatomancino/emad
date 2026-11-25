@@ -101,7 +101,12 @@ class RigaElenco extends StatelessWidget {
     this.leading,
     this.trailing,
     this.onTap,
+    this.maxRigheTitolo = 2,
   });
+
+  /// Righe massime del titolo prima dei puntini; `null` per testi fissi che
+  /// non devono mai essere tagliati (es. voci di menu).
+  final int? maxRigheTitolo;
 
   final String titolo;
   final String? sottotitolo;
@@ -131,8 +136,12 @@ class RigaElenco extends StatelessWidget {
                       children: [
                         Text(
                           titolo,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
+                          maxLines: maxRigheTitolo,
+                          // Senza limite di righe i puntini ridurrebbero il
+                          // titolo a una riga sola: il testo va a capo.
+                          overflow: maxRigheTitolo == null
+                              ? TextOverflow.visible
+                              : TextOverflow.ellipsis,
                           style: testo.titleMedium,
                         ),
                         if (sottotitolo != null)

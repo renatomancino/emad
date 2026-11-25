@@ -1,3 +1,4 @@
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -6,6 +7,7 @@ import 'package:cenato/domain/modelli/profilo.dart';
 import 'package:cenato/domain/repository/pazienti_repository.dart';
 import 'package:cenato/main.dart';
 import 'package:cenato/presentation/comuni/componenti.dart';
+import 'package:cenato/presentation/comuni/elimina_account_page.dart';
 
 import 'font_reali.dart';
 
@@ -288,6 +290,20 @@ void main() {
       );
     });
 
+    testWidgets(
+      'nutrizionista: il titolo della disponibilità non perde testo',
+      (tester) async {
+        await avviaStretto(tester, Ruolo.nutrizionista);
+        await apriProfiloNutrizionista(tester);
+        final titolo = find.text('Disponibilità e durata della visita');
+        expect(titolo, findsOneWidget);
+        expect(
+          tester.renderObject<RenderParagraph>(titolo).didExceedMaxLines,
+          isFalse,
+        );
+      },
+    );
+
     testWidgets('paziente: profilo con righe e icone tonali', (tester) async {
       await avviaStretto(tester, Ruolo.paziente);
       await apriProfiloPaziente(tester);
@@ -301,7 +317,10 @@ void main() {
       await tester.scrollUntilVisible(
         find.byKey(const Key('conferma-elimina')),
         300,
-        scrollable: find.byType(Scrollable).last,
+        scrollable: find.descendant(
+          of: find.byType(EliminaAccountPage),
+          matching: find.byType(Scrollable),
+        ),
       );
       expect(tester.takeException(), isNull);
       expect(find.byKey(const Key('conferma-elimina')), findsOneWidget);
