@@ -182,7 +182,8 @@ Script: `supabase/tests/piano_salva.sql`, come gli altri in una transazione annu
 
 - **Data**: 25/11/2026, **PostgreSQL 16 locale** con lo schema `auth` simulato (non il progetto Supabase del gruppo). Le migrazioni `000`–`008` si applicano senza errori.
 - **Esito**: **37 controlli su 37 OK**. Con `008` restano **50 su 50** per `rls.sql`, **21** per `alimenti_nutrizionista.sql`, **23** per `alimenti_visibilita.sql` e **16** per `schema_vincoli.sql`.
-- **Da ripetere sul progetto Supabase del gruppo**: applica `008_salva_piano.sql` e lancia `supabase/tests/piano_salva.sql` nel SQL Editor (ogni riga `OK`).
+- **Applicata sul progetto Supabase del gruppo** (`eu-west-1`, Postgres 17) il 25/11/2026. Prova sul progetto vero, in una transazione annullata con un errore finale (nessuna traccia: dopo restano 5 piani, tutti alla versione 1): salvataggio come Giulia sul piano di Marco con gli stessi alimenti → versioni 1 → 2, **una sola corrente**, la vecchia *superata*, voci 80 → 80, alternative 35 → 35, kcal 9609,1 → 9609,1 (il ricalcolo del database coincide con il seed); un altro nutrizionista riceve **CN020**. `salva_piano` è eseguibile da `authenticated` e non da `anon`.
+- **Ancora da fare, a mano**: lanciare l'intero `supabase/tests/piano_salva.sql` nel SQL Editor del progetto (attese 37 righe `OK`; sul PostgreSQL locale sono già 37/37).
 
 | Utente | Prova | Atteso |
 |---|---|---|
