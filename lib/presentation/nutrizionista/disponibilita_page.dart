@@ -3,7 +3,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../core/dipendenze.dart';
 import '../../core/router/rotte.dart';
-import '../../core/tema/tema.dart';
+import '../comuni/componenti.dart';
 
 /// Punto di innesto di UC_GV_3 (RF_GV_6): giorni, fasce orarie e durata della
 /// visita. La schermata vera arriva nella fase 4; qui, subito dopo la
@@ -30,11 +30,7 @@ class DisponibilitaPage extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(
-                    Icons.schedule,
-                    size: 64,
-                    color: ColoriCenato.primario,
-                  ),
+                  const IconaTonale(icona: Icons.schedule, dimensione: 88),
                   const SizedBox(height: 16),
                   Text(
                     'Quando ricevi?',

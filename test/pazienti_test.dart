@@ -7,6 +7,9 @@ import 'package:cenato/domain/modelli/paziente.dart';
 import 'package:cenato/domain/modelli/piano.dart';
 import 'package:cenato/domain/modelli/profilo.dart';
 import 'package:cenato/main.dart';
+import 'package:cenato/presentation/comuni/componenti.dart';
+import 'package:cenato/presentation/comuni/segnaposto_page.dart';
+import 'package:cenato/presentation/nutrizionista/sponsor_card.dart';
 
 /// Schede della fase 1: Piani e abbonamento, Inviti, Elenco pazienti.
 /// Flussi delle schermate con dati finti (nessun database).
@@ -183,4 +186,94 @@ void main() {
       expect(dati.pazienti.last.stato, StatoPaziente.archiviato);
     },
   );
+
+  group('Aspetto su telefono stretto e testo grande', () {
+    // 320 dp di larghezza e testo di sistema al 200% (RNF_U_3).
+    Future<void> avviaStretto(WidgetTester tester, DatiFinti dati) async {
+      tester.view.physicalSize = const Size(640, 2400);
+      tester.view.devicePixelRatio = 2;
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(tester.view.reset);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      await tester.pumpWidget(
+        CenatoApp(
+          dip: DipendenzeFinte(ruolo: Ruolo.nutrizionista, dati: dati).dip,
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> tocca(WidgetTester tester, Finder f) async {
+      await tester.ensureVisible(f);
+      await tester.pumpAndSettle();
+      await tester.tap(f);
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('elenco: righe in card e nome lunghissimo', (tester) async {
+      await avviaStretto(
+        tester,
+        DatiFinti(
+          pazienti: [
+            PazienteElenco(
+              id: 'a',
+              nome: ('Maria ' * 12).trim(),
+              stato: StatoPaziente.attivo,
+            ),
+            const PazienteElenco(
+              id: 'b',
+              nome: 'Marco',
+              stato: StatoPaziente.attivo,
+            ),
+          ],
+        ),
+      );
+      expect(tester.takeException(), isNull);
+      expect(find.byType(RigaElenco), findsNWidgets(2));
+      expect(find.text('Marco'), findsOneWidget);
+    });
+
+    testWidgets('piano Free: scheda sponsor senza overflow', (tester) async {
+      await avviaStretto(tester, DatiFinti(piano: PianoAbbonamento.free));
+      expect(tester.takeException(), isNull);
+      expect(find.byType(SponsorCard), findsOneWidget);
+    });
+
+    testWidgets('abbonamento: piano attuale come etichetta, senza overflow', (
+      tester,
+    ) async {
+      await avviaStretto(tester, DatiFinti(piano: PianoAbbonamento.free));
+      await tocca(
+        tester,
+        find.descendant(
+          of: find.byType(NavigationBar),
+          matching: find.text('Profilo'),
+        ),
+      );
+      expect(tester.takeException(), isNull);
+      // A testo grande le schede stanno sotto: si scorre fin lì.
+      await tester.scrollUntilVisible(
+        find.text('Annuale (2 mesi gratis)'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(tester.takeException(), isNull);
+      await tester.scrollUntilVisible(
+        find.widgetWithText(EtichettaStato, 'Attuale'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(tester.takeException(), isNull);
+      expect(find.widgetWithText(EtichettaStato, 'Attuale'), findsOneWidget);
+    });
+
+    testWidgets('invito: creazione e codice senza overflow', (tester) async {
+      await avviaStretto(tester, DatiFinti());
+      await tocca(tester, find.text('Invita'));
+      expect(tester.takeException(), isNull);
+      await tocca(tester, find.text('Crea invito'));
+      expect(tester.takeException(), isNull);
+      expect(find.byKey(const Key('codice-invito')), findsOneWidget);
+    });
+  });
 }

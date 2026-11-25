@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../../core/tema/tema.dart';
+import '../comuni/componenti.dart';
 
 /// SponsorCard (RF_GAD_6, RNF_L_6): scheda STATICA, solo nella dashboard del
 /// nutrizionista con piano Free. Nessuna immagine remota, nessuna chiamata di
@@ -11,36 +12,41 @@ class SponsorCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final testo = Theme.of(context).textTheme;
+    final c = context.colori;
     return Card(
-      color: const Color(0xFFFFF8E7),
+      color: c.avvisoTonale,
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(
-              Icons.campaign_outlined,
-              color: ColoriCenato.semaforoGiallo,
-              size: 32,
+            Row(
+              children: [
+                IconaTonale(
+                  icona: Icons.campaign_outlined,
+                  colore: c.avviso,
+                  sfondo: c.superficie,
+                  dimensione: 36,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Spazio sponsor',
+                    style: testo.labelMedium?.copyWith(color: c.avviso),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Spazio sponsor', style: testo.labelMedium),
-                  Text(
-                    'Corso di aggiornamento in nutrizione clinica (esempio)',
-                    style: testo.titleSmall,
-                  ),
-                  Text(
-                    'Visibile solo nel piano Free. Passa a Start o Pro per '
-                    'toglierlo.',
-                    style: testo.bodySmall?.copyWith(
-                      color: ColoriCenato.testoSecondario,
-                    ),
-                  ),
-                ],
-              ),
+            const SizedBox(height: 12),
+            Text(
+              'Corso di aggiornamento in nutrizione clinica (esempio)',
+              style: testo.titleSmall,
+            ),
+            const SizedBox(height: 2),
+            Text(
+              'Visibile solo nel piano Free. Passa a Start o Pro per '
+              'toglierlo.',
+              style: testo.bodySmall?.copyWith(color: c.testoSecondario),
             ),
           ],
         ),
