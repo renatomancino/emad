@@ -11,6 +11,8 @@ import 'package:cenato/presentation/comuni/componenti.dart';
 import 'package:cenato/presentation/comuni/segnaposto_page.dart';
 import 'package:cenato/presentation/nutrizionista/sponsor_card.dart';
 
+import 'font_reali.dart';
+
 /// Schede della fase 1: Piani e abbonamento, Inviti, Elenco pazienti.
 /// Flussi delle schermate con dati finti (nessun database).
 void main() {
@@ -188,11 +190,21 @@ void main() {
   );
 
   group('Aspetto su telefono stretto e testo grande', () {
+    // Font veri caricati una volta sola, prima dei test del gruppo.
+    setUpAll(() async {
+      TestWidgetsFlutterBinding.ensureInitialized();
+      await caricaFontReali();
+    });
+
     // 320 dp di larghezza e testo di sistema al 200% (RNF_U_3).
-    Future<void> avviaStretto(WidgetTester tester, DatiFinti dati) async {
+    Future<void> avviaStretto(
+      WidgetTester tester,
+      DatiFinti dati, {
+      double scala = 2,
+    }) async {
       tester.view.physicalSize = const Size(640, 2400);
       tester.view.devicePixelRatio = 2;
-      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      tester.platformDispatcher.textScaleFactorTestValue = scala;
       addTearDown(tester.view.reset);
       addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
       await tester.pumpWidget(
@@ -265,6 +277,70 @@ void main() {
       );
       expect(tester.takeException(), isNull);
       expect(find.widgetWithText(EtichettaStato, 'Attuale'), findsOneWidget);
+    });
+
+    // Con i font veri: il font di prova dei test non mostra le parole spezzate.
+    double altezzaTesto(WidgetTester tester, String testo) =>
+        tester.getSize(find.text(testo)).height;
+
+    testWidgets('filtri: ogni etichetta su una riga a 320 dp, testo normale', (
+      tester,
+    ) async {
+      await avviaStretto(tester, DatiFinti(), scala: 1);
+      expect(tester.takeException(), isNull);
+      expect(
+        altezzaTesto(tester, 'Archiviati'),
+        closeTo(altezzaTesto(tester, 'Tutti'), 0.5),
+      );
+      expect(
+        altezzaTesto(tester, 'Attivi'),
+        closeTo(altezzaTesto(tester, 'Tutti'), 0.5),
+      );
+    });
+
+    testWidgets('filtri: nessuna parola spezzata con testo al 200%', (
+      tester,
+    ) async {
+      await avviaStretto(tester, DatiFinti());
+      expect(tester.takeException(), isNull);
+      expect(
+        altezzaTesto(tester, 'Archiviati'),
+        closeTo(altezzaTesto(tester, 'Tutti'), 0.5),
+      );
+    });
+
+    testWidgets('filtro: tocco su Archiviati cambia l\'elenco', (tester) async {
+      await avviaStretto(tester, DatiFinti(), scala: 1);
+      await tocca(tester, find.text('Archiviati'));
+      expect(find.text('Luca'), findsOneWidget);
+      expect(find.text('Marco'), findsNothing);
+    });
+
+    testWidgets('abbonamento: periodo su una riga a 320 dp, testo normale', (
+      tester,
+    ) async {
+      await avviaStretto(
+        tester,
+        DatiFinti(piano: PianoAbbonamento.free),
+        scala: 1,
+      );
+      await tocca(
+        tester,
+        find.descendant(
+          of: find.byType(NavigationBar),
+          matching: find.text('Profilo'),
+        ),
+      );
+      await tester.scrollUntilVisible(
+        find.text('Annuale (2 mesi gratis)'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(tester.takeException(), isNull);
+      expect(
+        altezzaTesto(tester, 'Annuale (2 mesi gratis)'),
+        closeTo(altezzaTesto(tester, 'Mensile'), 0.5),
+      );
     });
 
     testWidgets('invito: creazione e codice senza overflow', (tester) async {

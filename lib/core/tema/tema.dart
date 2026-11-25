@@ -353,26 +353,19 @@ ThemeData temaCenato() {
       ),
     ),
     chipTheme: ChipThemeData(
-      backgroundColor: c.primarioTonale,
-      side: BorderSide.none,
+      backgroundColor: c.superficie,
+      selectedColor: c.primarioTonale,
+      side: WidgetStateBorderSide.resolveWith(
+        (stati) => stati.contains(WidgetState.selected)
+            ? BorderSide(color: c.primario, width: 1.5)
+            : BorderSide(color: c.bordoCampo),
+      ),
       shape: const StadiumBorder(),
-      labelStyle: testi.labelLarge?.copyWith(color: c.primario),
-    ),
-    segmentedButtonTheme: SegmentedButtonThemeData(
-      style: ButtonStyle(
-        shape: const WidgetStatePropertyAll(StadiumBorder()),
-        minimumSize: const WidgetStatePropertyAll(dimensioneMinima),
-        side: WidgetStatePropertyAll(BorderSide(color: c.bordoCampo)),
-        textStyle: WidgetStatePropertyAll(testoBottoni),
-        backgroundColor: WidgetStateProperty.resolveWith(
-          (stati) => stati.contains(WidgetState.selected)
-              ? c.primarioTonale
-              : c.superficie,
-        ),
-        foregroundColor: WidgetStateProperty.resolveWith(
-          (stati) =>
-              stati.contains(WidgetState.selected) ? c.primario : c.testo,
-        ),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      labelStyle: testi.labelLarge?.copyWith(color: c.testo),
+      secondaryLabelStyle: testi.labelLarge?.copyWith(
+        color: c.primario,
+        fontWeight: FontWeight.w700,
       ),
     ),
     snackBarTheme: SnackBarThemeData(

@@ -60,7 +60,7 @@ class _AbbonamentoViewState extends State<AbbonamentoView> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFFFFF8E7),
+                color: context.colori.avvisoTonale,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Text(
@@ -141,7 +141,12 @@ class _AbbonamentoViewState extends State<AbbonamentoView> {
       );
     }
     final s = _stato;
-    if (s == null) return const SizedBox(height: 160, child: CaricamentoView());
+    if (s == null) {
+      return ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 160),
+        child: const CaricamentoView(),
+      );
+    }
 
     final testo = Theme.of(context).textTheme;
     final occupati = postiOccupati(
@@ -197,20 +202,16 @@ class _AbbonamentoViewState extends State<AbbonamentoView> {
           ),
         ),
         const SizedBox(height: 16),
-        SegmentedButton<PeriodoFatturazione>(
-          segments: const [
-            ButtonSegment(
-              value: PeriodoFatturazione.mensile,
-              label: Text('Mensile'),
-            ),
-            ButtonSegment(
-              value: PeriodoFatturazione.annuale,
-              label: Text('Annuale (2 mesi gratis)'),
+        SelettorePillole<PeriodoFatturazione>(
+          opzioni: const [
+            OpzioneSelettore(PeriodoFatturazione.mensile, 'Mensile'),
+            OpzioneSelettore(
+              PeriodoFatturazione.annuale,
+              'Annuale (2 mesi gratis)',
             ),
           ],
-          selected: {_periodo},
-          showSelectedIcon: false,
-          onSelectionChanged: (v) => setState(() => _periodo = v.first),
+          selezionato: _periodo,
+          onCambiato: (v) => setState(() => _periodo = v),
         ),
         const SizedBox(height: 12),
         for (final piano in PianoAbbonamento.values) ...[

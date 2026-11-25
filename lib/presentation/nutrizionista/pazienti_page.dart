@@ -309,14 +309,13 @@ class _PazientiPageState extends State<PazientiPage> {
             const SponsorCard(),
             const SizedBox(height: 16),
           ],
-          SegmentedButton<FiltroPazienti>(
-            segments: [
+          SelettorePillole<FiltroPazienti>(
+            opzioni: [
               for (final f in FiltroPazienti.values)
-                ButtonSegment(value: f, label: Text(f.etichetta)),
+                OpzioneSelettore(f, f.etichetta),
             ],
-            selected: {_filtro},
-            showSelectedIcon: false,
-            onSelectionChanged: (s) => setState(() => _filtro = s.first),
+            selezionato: _filtro,
+            onCambiato: (f) => setState(() => _filtro = f),
           ),
           const SizedBox(height: 12),
           TextField(

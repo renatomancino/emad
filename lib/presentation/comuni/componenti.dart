@@ -167,3 +167,45 @@ class RigaElenco extends StatelessWidget {
     );
   }
 }
+
+/// Opzione di un [SelettorePillole].
+class OpzioneSelettore<T> {
+  const OpzioneSelettore(this.valore, this.etichetta);
+
+  final T valore;
+  final String etichetta;
+}
+
+/// Scelta singola tra poche opzioni, a pillole. Le pillole vanno a capo tra
+/// una e l'altra e non spezzano mai una parola, anche su telefoni stretti o
+/// con testo ingrandito (un `SegmentedButton` divide la larghezza in parti
+/// uguali e a 320 dp spezzava "Archiviati").
+class SelettorePillole<T> extends StatelessWidget {
+  const SelettorePillole({
+    super.key,
+    required this.opzioni,
+    required this.selezionato,
+    required this.onCambiato,
+  });
+
+  final List<OpzioneSelettore<T>> opzioni;
+  final T selezionato;
+  final ValueChanged<T> onCambiato;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final o in opzioni)
+          ChoiceChip(
+            label: Text(o.etichetta),
+            selected: o.valore == selezionato,
+            showCheckmark: false,
+            onSelected: (_) => onCambiato(o.valore),
+          ),
+      ],
+    );
+  }
+}
