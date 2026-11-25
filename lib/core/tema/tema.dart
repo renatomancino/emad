@@ -1,6 +1,8 @@
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'transizioni.dart';
+
 /// Famiglie di font incorporate in `assets/fonts/` (licenza SIL OFL).
 /// Titoli ed etichette forti: Plus Jakarta Sans. Testo corrente: Inter.
 const String fontTitoli = 'PlusJakartaSans';
@@ -201,6 +203,22 @@ TextTheme _testi(CenatoColori c) {
   );
 }
 
+/// Transizioni di pagina: dissolvenza in avanti (Material 3) ovunque, con
+/// "riduci animazioni" rispettato. iOS e macOS tengono quelle predefinite
+/// (scorrimento con il gesto "indietro").
+PageTransitionsTheme _transizioniDiPagina() {
+  const dissolvenza = TransizionePagina(FadeForwardsPageTransitionsBuilder());
+  return PageTransitionsTheme(
+    builders: {
+      ...const PageTransitionsTheme().builders,
+      TargetPlatform.android: dissolvenza,
+      TargetPlatform.fuchsia: dissolvenza,
+      TargetPlatform.linux: dissolvenza,
+      TargetPlatform.windows: dissolvenza,
+    },
+  );
+}
+
 /// Tema Material 3 chiaro dell'app: stile "app salute" con sfondo chiaro,
 /// card bianche con ombra morbida, controlli a pillola.
 ///
@@ -243,6 +261,7 @@ ThemeData temaCenato() {
     visualDensity: VisualDensity.standard,
     materialTapTargetSize: MaterialTapTargetSize.padded,
     extensions: const [c],
+    pageTransitionsTheme: _transizioniDiPagina(),
     appBarTheme: AppBarTheme(
       backgroundColor: c.sfondo,
       foregroundColor: c.testo,
