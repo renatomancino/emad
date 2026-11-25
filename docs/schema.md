@@ -53,6 +53,7 @@ erDiagram
 | `inviti` | Invito | UC_GI_1, UC_GI_2, SCD_1, RF_GI_8 | Codice, stato, scadenza |
 | `obiettivi` | ObiettivoNutrizionale | RF_GP_16, UC_GP_6 | Una riga per ogni modifica (storico) |
 | `alimenti` | Alimento | RF_GP_3, RF_GP_4, RF_GP_5, RNF_IN_1 | Cache Open Food Facts con `fonte` (ODbL) e alimenti personalizzati |
+| `alimenti_nutrizionista` | (recenti e preferiti) | RF_GP_14, UC_GP_3 | Per nutrizionista e alimento: `preferito` e `ultimo_uso`; RLS sulle sole righe proprie (migrazione 006) |
 | `piani` | PianoAlimentare | RF_GP_1, RF_GP_7 | Versioni; una sola `corrente` per paziente; `bozza` per l'importazione CSV |
 | `giorni` | (parte di PianoAlimentare) | RF_GP_1, RF_GP_13 | 1 = lunedì … 7 = domenica |
 | `pasti` | PastoPrevisto | RF_GP_1, UC_GP_2 | Tipo, orario, ordine |

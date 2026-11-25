@@ -125,3 +125,26 @@ Le funzioni di supporto alle policy stanno nello schema `privato`, non esposto d
 ## Da completare in fase 6
 
 La scheda "Test di sicurezza RLS (accessi consentiti e negati)" estenderà questi casi a tutte le tabelle e a tutte le combinazioni, compresi i pazienti archiviati con storico e la cancellazione dell'account (RF_GA_7).
+
+## Migrazione 006: recenti e preferiti degli alimenti
+
+Test di `supabase/tests/alimenti_nutrizionista.sql` sulla tabella `alimenti_nutrizionista` (RF_GP_14).
+
+- **Data**: 25/11/2026, **PostgreSQL 16 locale** con lo schema `auth` simulato (non il progetto Supabase del gruppo): le migrazioni `000`–`006` si applicano senza errori e `supabase/tests/rls.sql` dà ancora **50 controlli su 50 OK**.
+- **Esito**: **11 controlli su 11 OK**.
+- **Da ripetere sul progetto Supabase** prima della demo: SQL Editor → incolla `supabase/tests/alimenti_nutrizionista.sql` → *Run* (come `rls.sql`, in una transazione annullata) e applica prima `006_alimenti_nutrizionista.sql`.
+
+| # | Utente | Prova | Atteso |
+|---|---|---|---|
+| 1 | anonimo | Non legge recenti e preferiti | negato |
+| 2 | NUT A | Segna un alimento tra i recenti | ok |
+| 3 | NUT A | Non scrive una riga a nome di NUT B | violazione RLS |
+| 4 | NUT A | Una sola riga per coppia nutrizionista-alimento | chiave duplicata |
+| 5 | NUT A | Vede le proprie righe | 1 |
+| 6 | NUT A | Mette la stella al proprio alimento | 1 |
+| 7 | NUT B | Non vede le righe di NUT A | 0 |
+| 8 | NUT B | Non modifica le righe di NUT A | 0 |
+| 9 | NUT B | Non cancella le righe di NUT A | 0 |
+| 10 | PAZ | Non scrive recenti e preferiti | negato |
+| 11 | sistema | Senza l'alimento non restano righe orfane | 0 |
+
