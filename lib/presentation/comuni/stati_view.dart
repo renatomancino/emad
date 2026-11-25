@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../core/costanti/testi.dart';
 import '../../core/tema/tema.dart';
+import 'componenti.dart';
 
 /// Stato di caricamento (CLAUDE.md, "Come lavorare": caricamento, vuoto, errore).
 class CaricamentoView extends StatelessWidget {
@@ -52,22 +53,21 @@ class StatoVuotoView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final testo = Theme.of(context).textTheme;
+    final c = context.colori;
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icona, size: 56, color: ColoriCenato.primario),
-            const SizedBox(height: 16),
+            IconaTonale(icona: icona, dimensione: 80),
+            const SizedBox(height: 20),
             Text(titolo, textAlign: TextAlign.center, style: testo.titleLarge),
             const SizedBox(height: 8),
             Text(
               messaggio,
               textAlign: TextAlign.center,
-              style: testo.bodyLarge?.copyWith(
-                color: ColoriCenato.testoSecondario,
-              ),
+              style: testo.bodyLarge?.copyWith(color: c.testoSecondario),
             ),
             if (etichettaAzione != null && onAzione != null) ...[
               const SizedBox(height: 24),
@@ -95,18 +95,23 @@ class ErroreView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final testo = Theme.of(context).textTheme;
+    final c = context.colori;
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.cloud_off_outlined,
-              size: 56,
-              color: ColoriCenato.errore,
+            IconaTonale(
+              icona: Icons.cloud_off_outlined,
+              colore: c.errore,
+              sfondo: Color.alphaBlend(
+                c.errore.withValues(alpha: 0.10),
+                c.superficie,
+              ),
+              dimensione: 80,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
             Text(
               Testi.erroreGenerico,
               textAlign: TextAlign.center,
@@ -116,7 +121,7 @@ class ErroreView extends StatelessWidget {
             Text(
               messaggio,
               textAlign: TextAlign.center,
-              style: testo.bodyLarge,
+              style: testo.bodyLarge?.copyWith(color: c.testoSecondario),
             ),
             const SizedBox(height: 24),
             OutlinedButton.icon(
