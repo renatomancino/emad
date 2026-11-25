@@ -139,3 +139,39 @@ Il dettaglio paziente non esiste ancora (scheda di Fase 3). Finché non c'è, "O
 
 - **Editor del piano (RM):** usare `ObiettiviRepository.corrente(pazienteId)` o `osserva(pazienteId)` (stream che riemette dopo ogni salvataggio). Se è `null`, invitare a impostarli senza bloccare l'editor.
 - **Sezione Dieta (MC):** la stessa interfaccia vale per il paziente, perché la policy `obiettivi_select` gli consente di leggere i propri; serve però l'`id` della sua riga in `pazienti` (non l'id utente). Se non è già esposto dal repository del collegamento, aggiungerlo lì.
+
+## Editor del piano (UC_GP_1, UC_GP_2, RF_GP_1, RF_GP_2, RF_GP_7, RF_GP_15, RF_GP_16)
+
+### D19 · Salvataggio con una RPC transazionale (migrazione 008)
+
+Le policy RLS (002) permettono di scrivere giorni, pasti e voci **solo su una versione in `bozza`**, e per assegnarla bisogna scambiare la versione `corrente`. Fatto dall'app sarebbero decine di chiamate: se la rete cade a metà, il paziente potrebbe restare senza piano. Per questo `salva_piano(paziente, data_inizio, struttura)` fa tutto in una transazione: controlla che il chiamante sia il nutrizionista di un paziente **attivo**, valida la struttura, crea la versione n+1, **ricalcola kcal e macro di ogni voce dai valori per 100 g** (l'app non può falsarli), porta la precedente a `superato` e la nuova a `corrente`. Le versioni vecchie restano e i check-in restano legati ai loro pasti. L'app non usa mai lo stato `bozza` per l'editor (la bozza serve all'importazione CSV, scheda di Mario).
+
+Codici di errore nuovi: CN020 paziente non tuo o non attivo · CN021 struttura non valida · CN022 pasto senza alimenti · CN023 alimento non disponibile · CN024 quantità non valida.
+
+### D20 · Costanti dell'editor (`lib/domain/regole/calcoli_piano.dart`)
+
+| Costante | Valore | Note |
+|---|---|---|
+| `tolleranzaScostamento` | 10 % | Oltre questo scarto dall'obiettivo il totale è "fuori obiettivo" (giallo, mai rosso: non è un giudizio clinico). **[DA CONFERMARE]** |
+| `quantitaRapideG` | 50, 100, 150, 200 | RF_GP_15. |
+| `quantitaMaxG` | 5000 g | Il database accetta fino a 10000. **[DA CONFERMARE]** |
+
+Kcal e macro di una voce sono **arrotondati a un decimale** come `round(…, 1)` del database, così i totali mostrati prima di salvare coincidono con quelli salvati.
+
+### D21 · Modifica = nuova versione; alternative conservate
+
+Aprendo l'editor su un paziente con un piano in uso, si parte da quel piano e il salvataggio crea la **versione successiva** (mostrata nell'editor: "Versione N · dal …", con data di inizio modificabile). Le **alternative** (RF_GP_6) non si modificano ancora (scheda successiva) ma si **conservano**: passano nella nuova versione e si leggono nell'editor, così modificare un piano del seed non le perde. Lo storico (icona orologio) mostra le versioni e permette di **consultare, non ripristinare** una vecchia versione.
+
+### D22 · Cosa blocca il salvataggio, cosa no
+
+Bloccano: piano senza giorni, giorno senza pasti, pasto senza alimenti (UC_GP_1, flusso 8.1): l'avviso elenca i primi 4 problemi e riassume gli altri ("…e altri N"). **Non bloccano**: obiettivi mancanti (banner con "Imposta obiettivi") e totali fuori obiettivo. Uscendo con modifiche non salvate si chiede conferma.
+
+### D23 · Dove si raggiunge e cosa riusare
+
+Come per gli obiettivi, finché non c'è il dettaglio paziente (Fase 3) il pulsante **Piano alimentare** è nel pannello di un paziente Attivo (`/nutrizionista/pazienti/:id/piano`). Per le altre schede:
+
+- **Sezione Dieta (MC):** `PianiRepository.corrente(pazienteId)` (con l'id della riga in `pazienti`, come per gli obiettivi) e il widget `PianoSolaLettura(piano, obiettivi)` in `lib/presentation/nutrizionista/piano/`, già pronto per giorni, totali, scostamento, voci e alternative.
+- **Alternative / copia giorno / modelli (RM):** `PianoAlimentare` ha già `aggiungiGiorno`, `aggiungiPasto`, `aggiungiVoce`…; la RPC accetta già le alternative.
+- **Notifiche:** il punto di aggancio per "nuovo piano" è in fondo a `salva_piano` (commento `>>> Aggancio notifica`) e in `PianiRepository.salva`.
+- **Importazione CSV (MC):** costruisce un `PianoAlimentare` e lo passa a `PianiRepository.salva`.
+
