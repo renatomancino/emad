@@ -129,6 +129,107 @@ void main() {
     });
   });
 
+  group('Dimensione del testo nell\'intestazione', () {
+    Future<double> altezzaTitolo(
+      WidgetTester tester, {
+      required double scala,
+      String? sottotitolo,
+    }) async {
+      tester.view.physicalSize = const Size(640, 1600);
+      tester.view.devicePixelRatio = 2;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        _inApp(
+          const SizedBox(),
+          scala: scala,
+          intestazione: IntestazioneSezione(
+            titolo: 'Pazienti',
+            sottotitolo: sottotitolo,
+          ),
+        ),
+      );
+      expect(tester.takeException(), isNull);
+      final titolo = find.text('Pazienti');
+      // Altezza disegnata (tiene conto di eventuali trasformazioni).
+      return tester.getBottomRight(titolo).dy - tester.getTopLeft(titolo).dy;
+    }
+
+    testWidgets('un sottotitolo lungo non rimpicciolisce il titolo', (
+      tester,
+    ) async {
+      final solo = await altezzaTitolo(tester, scala: 1);
+      final conLungo = await altezzaTitolo(
+        tester,
+        scala: 1,
+        sottotitolo: 'Sottotitolo molto lungo, ' * 3,
+      );
+      expect(conLungo, closeTo(solo, 0.5));
+    });
+
+    testWidgets('con testo al 200% il titolo non è più piccolo che al 100%', (
+      tester,
+    ) async {
+      final normale = await altezzaTitolo(tester, scala: 1);
+      final grande = await altezzaTitolo(
+        tester,
+        scala: 2,
+        sottotitolo: 'Elenco, filtri e inviti',
+      );
+      expect(grande, greaterThanOrEqualTo(normale));
+    });
+
+    testWidgets('solo il titolo è un\'intestazione per lo screen reader', (
+      tester,
+    ) async {
+      final semantica = tester.ensureSemantics();
+      await tester.pumpWidget(
+        _inApp(
+          const SizedBox(),
+          intestazione: const IntestazioneSezione(
+            titolo: 'Pazienti',
+            sottotitolo: 'Elenco, filtri e inviti',
+          ),
+        ),
+      );
+      expect(tester.getSemantics(find.text('Pazienti')).label, 'Pazienti');
+      semantica.dispose();
+    });
+  });
+
+  group('RigaElenco: spazio al titolo', () {
+    testWidgets(
+      'il titolo usa tutto lo spazio che l\'etichetta lascia libero',
+      (tester) async {
+        await tester.pumpWidget(
+          _inApp(
+            Align(
+              alignment: Alignment.topLeft,
+              child: SizedBox(
+                width: 390,
+                child: RigaElenco(
+                  titolo: 'W' * 60,
+                  leading: const IconaTonale(icona: Icons.person),
+                  trailing: const EtichettaStato(testo: 'Attivo'),
+                ),
+              ),
+            ),
+          ),
+        );
+        // Riga 390 − padding 32 − icona 44 − 2 spazi da 12 − etichetta.
+        final libero =
+            390 -
+            32 -
+            44 -
+            24 -
+            tester.getSize(find.byType(EtichettaStato)).width;
+        expect(
+          tester.getSize(find.text('W' * 60)).width,
+          greaterThanOrEqualTo(libero - 24),
+        );
+      },
+    );
+  });
+
   group('Testo al 200% su 320 dp', () {
     testWidgets('intestazione con titolo e sottotitolo lunghi', (tester) async {
       tester.view.physicalSize = const Size(640, 1600);
@@ -154,17 +255,18 @@ void main() {
       addTearDown(tester.view.reset);
       await tester.pumpWidget(
         _inApp(
-          const StatoVuotoView(
+          StatoVuotoView(
             icona: Icons.groups,
             titolo: 'Nessun paziente',
             messaggio: 'Invita il tuo primo paziente: riceverà un codice.',
             etichettaAzione: 'Invita un paziente',
-            onAzione: null,
+            onAzione: () {},
           ),
           scala: 2,
         ),
       );
       expect(tester.takeException(), isNull);
+      expect(find.text('Invita un paziente'), findsOneWidget);
       await tester.pumpWidget(
         _inApp(
           ErroreView(messaggio: 'Rete assente', onRiprova: () {}),

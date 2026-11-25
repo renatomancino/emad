@@ -8,9 +8,12 @@ import 'stati_view.dart';
 /// Intestazione delle sezioni: titolo grande e sottotitolo su sfondo chiaro,
 /// come nelle app salute (sostituisce la fascia verde dei mock-up del RAD).
 ///
-/// Il titolo si riduce quando il testo di sistema è molto grande, così non
-/// va mai in overflow. I colori sono impostati qui: `titleTextStyle` del
-/// tema non viene ricolorato da `foregroundColor`.
+/// L'altezza della barra è fissa, quindi il testo dell'intestazione segue la
+/// dimensione di sistema solo fino a 1,3×: oltre, titolo e sottotitolo restano
+/// comunque più grandi che al 100% (sono già testo grande) e non vanno mai in
+/// overflow. Titolo e sottotitolo stanno su una riga con puntini. I colori
+/// sono impostati qui: `titleTextStyle` del tema non viene ricolorato da
+/// `foregroundColor`.
 class IntestazioneSezione extends StatelessWidget
     implements PreferredSizeWidget {
   const IntestazioneSezione({
@@ -19,6 +22,9 @@ class IntestazioneSezione extends StatelessWidget
     this.sottotitolo,
     this.azioni = const [],
   });
+
+  /// Dimensione massima del testo dell'intestazione rispetto a quella di sistema.
+  static const double scalaTestoMassima = 1.3;
 
   final String titolo;
   final String? sottotitolo;
@@ -36,29 +42,32 @@ class IntestazioneSezione extends StatelessWidget
       backgroundColor: c.sfondo,
       titleSpacing: 20,
       actions: azioni,
-      title: Semantics(
-        header: true,
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: Alignment.centerLeft,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                titolo,
-                style: testo.headlineMedium?.copyWith(
-                  color: c.testo,
-                  fontWeight: FontWeight.w800,
-                ),
+      title: MediaQuery.withClampedTextScaling(
+        maxScaleFactor: scalaTestoMassima,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              titolo,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: testo.headlineMedium?.copyWith(
+                color: c.testo,
+                fontWeight: FontWeight.w800,
               ),
-              if (sottotitolo != null)
-                Text(
+            ),
+            if (sottotitolo != null)
+              Semantics(
+                container: true,
+                child: Text(
                   sottotitolo!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: testo.bodyMedium?.copyWith(color: c.testoSecondario),
                 ),
-            ],
-          ),
+              ),
+          ],
         ),
       ),
     );
@@ -128,10 +137,7 @@ class EtichettaStato extends StatelessWidget {
     final (sfondo, colore) = switch (tono) {
       TonoStato.positivo => (c.primarioTonale, c.primario),
       TonoStato.attenzione => (c.avvisoTonale, c.avviso),
-      TonoStato.errore => (
-        Color.alphaBlend(c.errore.withValues(alpha: 0.10), c.superficie),
-        c.errore,
-      ),
+      TonoStato.errore => (c.erroreTonale, c.errore),
       TonoStato.neutro => (c.bordo, c.testoSecondario),
     };
     return DecoratedBox(

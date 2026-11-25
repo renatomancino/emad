@@ -120,37 +120,46 @@ class RigaElenco extends StatelessWidget {
           constraints: const BoxConstraints(minHeight: 64),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Row(
-              children: [
-                if (leading != null) ...[leading!, const SizedBox(width: 12)],
-                Expanded(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        titolo,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: testo.titleMedium,
-                      ),
-                      if (sottotitolo != null)
+            child: LayoutBuilder(
+              builder: (context, vincoli) => Row(
+                children: [
+                  if (leading != null) ...[leading!, const SizedBox(width: 12)],
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         Text(
-                          sottotitolo!,
+                          titolo,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: testo.bodyMedium?.copyWith(
-                            color: c.testoSecondario,
-                          ),
+                          style: testo.titleMedium,
                         ),
-                    ],
+                        if (sottotitolo != null)
+                          Text(
+                            sottotitolo!,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: testo.bodyMedium?.copyWith(
+                              color: c.testoSecondario,
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
-                ),
-                if (trailing != null) ...[
-                  const SizedBox(width: 12),
-                  Flexible(child: trailing!),
+                  if (trailing != null) ...[
+                    const SizedBox(width: 12),
+                    // L'elemento finale prende lo spazio che gli serve, fino
+                    // al 45% della riga; il resto va al titolo.
+                    ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxWidth: vincoli.maxWidth * 0.45,
+                      ),
+                      child: trailing!,
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ),

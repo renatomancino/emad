@@ -105,10 +105,7 @@ class ErroreView extends StatelessWidget {
             IconaTonale(
               icona: Icons.cloud_off_outlined,
               colore: c.errore,
-              sfondo: Color.alphaBlend(
-                c.errore.withValues(alpha: 0.10),
-                c.superficie,
-              ),
+              sfondo: c.erroreTonale,
               dimensione: 80,
             ),
             const SizedBox(height: 20),

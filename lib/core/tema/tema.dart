@@ -22,6 +22,7 @@ abstract final class _Palette {
   static const sulPrimario = Color(0xFFFFFFFF);
   static const primarioTonale = Color(0xFFE2F1E8);
   static const errore = Color(0xFFB3261E);
+  static const erroreTonale = Color(0xFFF7E9E8);
   static const avviso = Color(0xFF8A5A00);
   static const avvisoTonale = Color(0xFFFFF3D6);
 
@@ -63,6 +64,7 @@ class CenatoColori extends ThemeExtension<CenatoColori> {
     required this.sulPrimario,
     required this.primarioTonale,
     required this.errore,
+    required this.erroreTonale,
     required this.avviso,
     required this.avvisoTonale,
     required this.semaforoVerde,
@@ -92,6 +94,9 @@ class CenatoColori extends ThemeExtension<CenatoColori> {
   final Color primarioTonale;
   final Color errore;
 
+  /// Fondo tenue del rosso, per icone e badge di errore.
+  final Color erroreTonale;
+
   /// Testo di avviso (giallo scuro) da usare su [avvisoTonale].
   final Color avviso;
   final Color avvisoTonale;
@@ -110,6 +115,7 @@ class CenatoColori extends ThemeExtension<CenatoColori> {
     sulPrimario: _Palette.sulPrimario,
     primarioTonale: _Palette.primarioTonale,
     errore: _Palette.errore,
+    erroreTonale: _Palette.erroreTonale,
     avviso: _Palette.avviso,
     avvisoTonale: _Palette.avvisoTonale,
     semaforoVerde: _Palette.semaforoVerde,
@@ -129,6 +135,7 @@ class CenatoColori extends ThemeExtension<CenatoColori> {
     Color? sulPrimario,
     Color? primarioTonale,
     Color? errore,
+    Color? erroreTonale,
     Color? avviso,
     Color? avvisoTonale,
     Color? semaforoVerde,
@@ -146,6 +153,7 @@ class CenatoColori extends ThemeExtension<CenatoColori> {
       sulPrimario: sulPrimario ?? this.sulPrimario,
       primarioTonale: primarioTonale ?? this.primarioTonale,
       errore: errore ?? this.errore,
+      erroreTonale: erroreTonale ?? this.erroreTonale,
       avviso: avviso ?? this.avviso,
       avvisoTonale: avvisoTonale ?? this.avvisoTonale,
       semaforoVerde: semaforoVerde ?? this.semaforoVerde,
@@ -169,6 +177,7 @@ class CenatoColori extends ThemeExtension<CenatoColori> {
       sulPrimario: l(sulPrimario, other.sulPrimario),
       primarioTonale: l(primarioTonale, other.primarioTonale),
       errore: l(errore, other.errore),
+      erroreTonale: l(erroreTonale, other.erroreTonale),
       avviso: l(avviso, other.avviso),
       avvisoTonale: l(avvisoTonale, other.avvisoTonale),
       semaforoVerde: l(semaforoVerde, other.semaforoVerde),

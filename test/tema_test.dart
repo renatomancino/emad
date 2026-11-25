@@ -42,6 +42,7 @@ void main() {
         'primario/primarioTonale': _contrasto(c.primario, c.primarioTonale),
         'primario/superficie': _contrasto(c.primario, c.superficie),
         'errore/superficie': _contrasto(c.errore, c.superficie),
+        'errore/erroreTonale': _contrasto(c.errore, c.erroreTonale),
         'avviso/avvisoTonale': _contrasto(c.avviso, c.avvisoTonale),
       };
       coppie.forEach((nome, rapporto) {
