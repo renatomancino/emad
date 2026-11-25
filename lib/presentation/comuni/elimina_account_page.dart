@@ -4,6 +4,7 @@ import '../../core/dipendenze.dart';
 import '../../core/tema/tema.dart';
 import '../../domain/modelli/profilo.dart';
 import '../../domain/repository/pazienti_repository.dart';
+import 'componenti.dart';
 import 'controlli.dart';
 
 /// Eliminazione dell'account su richiesta (UC_GA_5, RF_GA_7, GDPR art. 17).
@@ -86,6 +87,7 @@ class _EliminaAccountPageState extends State<EliminaAccountPage> {
   @override
   Widget build(BuildContext context) {
     final testo = Theme.of(context).textTheme;
+    final c = context.colori;
     return Scaffold(
       appBar: AppBar(title: const Text('Elimina account')),
       body: SafeArea(
@@ -98,22 +100,22 @@ class _EliminaAccountPageState extends State<EliminaAccountPage> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: ColoriCenato.errore.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: ColoriCenato.errore.withValues(alpha: 0.4),
-                    ),
+                    color: c.erroreTonale,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: c.errore.withValues(alpha: 0.4)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
-                          const Icon(
-                            Icons.warning_amber_rounded,
-                            color: ColoriCenato.errore,
+                          IconaTonale(
+                            icona: Icons.warning_amber_rounded,
+                            colore: c.errore,
+                            sfondo: c.superficie,
+                            dimensione: 40,
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 12),
                           Expanded(
                             child: Text(
                               'Questa azione è definitiva',
@@ -152,16 +154,14 @@ class _EliminaAccountPageState extends State<EliminaAccountPage> {
                   width: double.infinity,
                   child: FilledButton(
                     key: const Key('conferma-elimina'),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: ColoriCenato.errore,
-                    ),
+                    style: FilledButton.styleFrom(backgroundColor: c.errore),
                     onPressed: _confermato && !_inCorso ? _elimina : null,
                     child: _inCorso
-                        ? const SizedBox.square(
+                        ? SizedBox.square(
                             dimension: 20,
                             child: CircularProgressIndicator(
                               strokeWidth: 2.5,
-                              color: Colors.white,
+                              color: c.sulPrimario,
                             ),
                           )
                         : const Text('Elimina definitivamente'),

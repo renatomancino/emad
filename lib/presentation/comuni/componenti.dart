@@ -209,3 +209,36 @@ class SelettorePillole<T> extends StatelessWidget {
     );
   }
 }
+
+/// "Sei stato invitato da NOME" (UC_GI_2, passo 3): usato dalla registrazione
+/// e dalla schermata di collegamento del paziente.
+class BannerInvito extends StatelessWidget {
+  const BannerInvito({super.key, required this.nomeNutrizionista});
+
+  final String nomeNutrizionista;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colori;
+    return Container(
+      key: const Key('banner-invito'),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: c.primarioTonale,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.verified_outlined, color: c.primario),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Sei stato invitato da $nomeNutrizionista.',
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

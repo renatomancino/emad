@@ -330,7 +330,7 @@ class _RegistrazionePageState extends State<RegistrazionePage> {
         ),
         if (_anteprima != null) ...[
           const SizedBox(height: 12),
-          _BannerInvito(anteprima: _anteprima!),
+          BannerInvito(nomeNutrizionista: _anteprima!.nomeNutrizionista),
         ],
         if (_erroreGenerale != null) ...[
           const SizedBox(height: 12),
@@ -364,7 +364,7 @@ class _RegistrazionePageState extends State<RegistrazionePage> {
         ),
         const SizedBox(height: 12),
         if (_paziente && _anteprima != null) ...[
-          _BannerInvito(anteprima: _anteprima!),
+          BannerInvito(nomeNutrizionista: _anteprima!.nomeNutrizionista),
           const SizedBox(height: 12),
         ],
         SchedaSezione(
@@ -471,37 +471,6 @@ class _SchedaRuolo extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-/// "Sei stato invitato da NOME" (UC_GI_2, passo 3).
-class _BannerInvito extends StatelessWidget {
-  const _BannerInvito({required this.anteprima});
-
-  final AnteprimaInvito anteprima;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      key: const Key('banner-invito'),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: context.colori.primarioTonale,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.verified_outlined, color: context.colori.primario),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              'Sei stato invitato da ${anteprima.nomeNutrizionista}.',
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-          ),
-        ],
       ),
     );
   }
