@@ -176,3 +176,27 @@ Test di `supabase/tests/alimenti_visibilita.sql` sulle policy di `alimenti` (RF_
 | NUT A | Non crea uno personalizzato senza proprietario né a nome di NUT B | violazione RLS |
 | PAZ A1 | Non scrive nella cache | negato |
 
+## Salvataggio del piano (migrazione 008)
+
+Script: `supabase/tests/piano_salva.sql`, come gli altri in una transazione annullata (`ROLLBACK`). Requisiti: RF_GP_1, RF_GP_2, RF_GP_7; UC_GP_1.
+
+- **Data**: 25/11/2026, **PostgreSQL 16 locale** con lo schema `auth` simulato (non il progetto Supabase del gruppo). Le migrazioni `000`–`008` si applicano senza errori.
+- **Esito**: **37 controlli su 37 OK**. Con `008` restano **50 su 50** per `rls.sql`, **21** per `alimenti_nutrizionista.sql`, **23** per `alimenti_visibilita.sql` e **16** per `schema_vincoli.sql`.
+- **Da ripetere sul progetto Supabase del gruppo**: applica `008_salva_piano.sql` e lancia `supabase/tests/piano_salva.sql` nel SQL Editor (ogni riga `OK`).
+
+| Utente | Prova | Atteso |
+|---|---|---|
+| NUT A | Salva il primo piano per un proprio paziente attivo | ok, versione 1 corrente |
+| NUT A | Giorni, pasti, voci e alternativa creati; kcal ricalcolate dal database (40 g di avena = 148,8) | 2 / 3 / 1 / 148,8 |
+| PAZ A1 | Vede il piano assegnato (una sola versione corrente) | 1 |
+| NUT A | Un secondo salvataggio crea la versione 2: la 1 diventa *superata*, una sola *corrente* | ok |
+| NUT A | Il check-in fatto sulla versione 1 resta legato ai suoi pasti; la v1 conserva la struttura | ok |
+| NUT B, PAZ A1, anonimo | Non assegnano piani al paziente di un altro, né da paziente, né senza login | CN020 / permesso negato |
+| NUT A | Non assegna a un paziente archiviato o solo invitato | CN020 |
+| NUT A | Pasto senza alimenti, piano senza giorni, giorno senza pasti, giorno 8, giorno ripetuto, tipo di pasto sconosciuto | CN022 / CN021 |
+| NUT A | Quantità zero, negativa o enorme | CN024 |
+| NUT A | Alimento personalizzato di un altro, inesistente, alternativa non disponibile; un proprio personalizzato è accettato | CN023 / ok |
+| NUT A | **Tutto o niente**: un errore al secondo giorno non lascia versioni in più e la corrente resta la stessa | ok |
+| NUT B, PAZ B1 | Non vedono i piani di altri | 0 |
+| NUT A | Una versione assegnata non si modifica a mano | 0 |
+
