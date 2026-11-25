@@ -11,6 +11,7 @@ import 'data/finto/dipendenze_finte.dart';
 import 'data/open_food_facts/open_food_facts_client.dart';
 import 'data/supabase/alimenti_cache_supabase.dart';
 import 'data/supabase/collegamento_repository_supabase.dart';
+import 'data/supabase/obiettivi_repository_supabase.dart';
 import 'data/supabase/pazienti_repository_supabase.dart';
 import 'data/supabase/profilo_repository_supabase.dart';
 import 'data/supabase/supabase_auth_repository.dart';
@@ -66,6 +67,7 @@ Future<void> main() async {
           cache: AlimentiCacheSupabase(db),
           online: OpenFoodFactsClient(),
         ),
+        obiettivi: ObiettiviRepositorySupabase(db),
       ),
     ),
   );

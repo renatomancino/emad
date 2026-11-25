@@ -23,6 +23,10 @@ abstract final class Rotte {
   // Nutrizionista
   static const nutPazienti = '/nutrizionista/pazienti';
   static const nutInvito = '/nutrizionista/pazienti/invito';
+
+  /// Obiettivi nutrizionali di un paziente (UC_GP_6).
+  static String nutObiettivi(String pazienteId) =>
+      '/nutrizionista/pazienti/$pazienteId/obiettivi';
   static const nutCalendario = '/nutrizionista/calendario';
   static const nutDisponibilita = '/nutrizionista/disponibilita';
   static const nutProfilo = '/nutrizionista/profilo';

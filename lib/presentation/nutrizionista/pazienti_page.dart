@@ -180,11 +180,13 @@ class _PazientiPageState extends State<PazientiPage> {
   }
 
   void _azioniPaziente(PazienteElenco p) {
+    final router = GoRouter.of(context);
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
+      isScrollControlled: true,
       builder: (context) => SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -193,6 +195,17 @@ class _PazientiPageState extends State<PazientiPage> {
               Text(p.nome, style: Theme.of(context).textTheme.titleLarge),
               Text(p.stato.etichetta),
               const SizedBox(height: 16),
+              if (p.stato == StatoPaziente.attivo) ...[
+                FilledButton.icon(
+                  icon: const Icon(Icons.track_changes_outlined),
+                  label: const Text('Obiettivi nutrizionali'),
+                  onPressed: () {
+                    Navigator.pop(context);
+                    router.push(Rotte.nutObiettivi(p.id), extra: p.nome);
+                  },
+                ),
+                const SizedBox(height: 8),
+              ],
               if (p.stato == StatoPaziente.attivo)
                 OutlinedButton.icon(
                   icon: const Icon(Icons.archive_outlined),
