@@ -52,7 +52,7 @@ erDiagram
 | `pazienti` | Paziente | UC_GI_1-5, SCD_3, RF_GI_4, RF_GI_7 | Collegamento persona ↔ nutrizionista con stato; `data_collegamento` = invito accettato |
 | `inviti` | Invito | UC_GI_1, UC_GI_2, SCD_1, RF_GI_8 | Codice, stato, scadenza |
 | `obiettivi` | ObiettivoNutrizionale | RF_GP_16, UC_GP_6 | Una riga per ogni modifica (storico) |
-| `alimenti` | Alimento | RF_GP_3, RF_GP_4, RF_GP_5, RNF_IN_1 | Cache Open Food Facts con `fonte` (ODbL) e alimenti personalizzati |
+| `alimenti` | Alimento | RF_GP_3, RF_GP_4, RF_GP_5, RNF_IN_1 | Cache Open Food Facts con `fonte` (ODbL) e alimenti personalizzati; questi li vede e modifica solo chi li ha creato (e il paziente se stanno nel suo piano, migrazione 007); gli alimenti di Open Food Facts non si modificano dai client |
 | `alimenti_nutrizionista` | (recenti e preferiti) | RF_GP_14, UC_GP_3 | Per nutrizionista e alimento: `preferito` e `ultimo_uso`; RLS sulle sole righe proprie (migrazione 006) |
 | `piani` | PianoAlimentare | RF_GP_1, RF_GP_7 | Versioni; una sola `corrente` per paziente; `bozza` per l'importazione CSV |
 | `giorni` | (parte di PianoAlimentare) | RF_GP_1, RF_GP_13 | 1 = lunedì … 7 = domenica |

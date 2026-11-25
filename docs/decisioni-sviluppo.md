@@ -91,6 +91,17 @@ L'editor non esiste ancora. Finché non c'è, la ricerca si raggiunge dal **prof
 
 Il ticket indica `lib/data/open_food_facts_client.dart` e `lib/data/alimenti_repository.dart`. Si è seguita la struttura a livelli del repository: interfacce e modello in `domain/`, client in `data/open_food_facts/` (cartella già prevista), logica in `data/alimenti_repository.dart`, cache su Supabase in `data/supabase/`, versioni finte in `data/finto/`.
 
+### D15 · Chi vede e chi modifica gli alimenti (migrazione 007)
+
+Scelta di Mario Celzo ("completamente d'accordo"). Prima (002) ogni utente autenticato leggeva ogni alimento e **qualsiasi nutrizionista poteva modificare i valori degli alimenti di Open Food Facts**, cioè di una cache condivisa. Ora:
+
+- **Open Food Facts:** li legge chiunque sia autenticato (dati pubblici ODbL); nessun client li modifica, l'app li inserisce soltanto.
+- **Personalizzati:** li vede e li modifica solo chi li ha creato. Il **paziente** li vede solo se compaiono, come voce o come alternativa, in un piano che può leggere (gli servono per la sezione Dieta); una bozza non conta.
+- **Senza proprietario** (`creato_da` nullo, i dati di prova del seed): restano leggibili da tutti, così la demo non cambia.
+- Inserimenti: un alimento di Open Food Facts con `creato_da` nullo (o proprio); uno personalizzato solo a proprio nome.
+
+Prove in `supabase/tests/alimenti_visibilita.sql`: 23 controlli, con le vecchie policy 7 falliscono.
+
 ### Tempi misurati (25/11/2026, dal container di sviluppo, `dart run tool/misura_ricerca.dart`)
 
 | Ricerca | Esito | Tempo |

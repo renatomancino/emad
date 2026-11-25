@@ -150,3 +150,29 @@ Test di `supabase/tests/alimenti_nutrizionista.sql` sulla tabella `alimenti_nutr
 | 16–19 | NUT A, PAZ | Inserimenti in `alimenti`: Open Food Facts e personalizzato ok; a nome di un altro o da paziente negati | ok / violazione RLS |
 | 20–21 | PAZ, sistema | Paziente non scrive recenti e preferiti; senza l'alimento non restano righe orfane | negato / 0 |
 
+## Migrazione 007: visibilità e modifica degli alimenti
+
+Test di `supabase/tests/alimenti_visibilita.sql` sulle policy di `alimenti` (RF_GP_3, RF_GP_5, RNF_IN_1).
+
+- **Data**: 25/11/2026, **PostgreSQL 16 locale** con lo schema `auth` simulato.
+- **Esito**: **23 controlli su 23 OK**. Rimettendo le policy di `002_rls.sql`, 7 controlli diventano KO (un nutrizionista vede gli alimenti di un altro e modifica quelli di Open Food Facts): il test misura davvero la modifica.
+- Dopo la 007 restano **50 su 50** per `rls.sql` e **21 su 21** per `alimenti_nutrizionista.sql`.
+- **Da ripetere sul progetto Supabase del gruppo**: applica `007_alimenti_visibilita.sql` (dopo la `006`) e lancia i tre script come descritto in `docs/prova-alimenti.md`.
+
+| Utente | Prova | Atteso |
+|---|---|---|
+| anonimo | Non legge la cache | negato |
+| NUT A, NUT B | Vedono gli alimenti di Open Food Facts | 1 |
+| NUT A | Vede i propri personalizzati; non quelli di NUT B | 1 / 0 |
+| NUT B | Non vede i personalizzati di NUT A | 0 |
+| NUT A, NUT B | Vedono quelli senza proprietario (seed) | 1 |
+| PAZ A1 | Vede i personalizzati del proprio piano (voce e alternativa) | 1 |
+| PAZ A1 | Non vede alimenti fuori dal piano, in una bozza o di un altro nutrizionista | 0 |
+| PAZ B1 | Non vede gli alimenti del piano di un altro | 0 |
+| NUT A | Modifica un proprio personalizzato | 1 |
+| NUT A, NUT B | Non modificano quelli di Open Food Facts né quelli altrui | 0 |
+| PAZ A1 | Non modifica | 0 |
+| NUT A | Salva un alimento di Open Food Facts e ne crea uno personalizzato a proprio nome | ok |
+| NUT A | Non crea uno personalizzato senza proprietario né a nome di NUT B | violazione RLS |
+| PAZ A1 | Non scrive nella cache | negato |
+
