@@ -131,7 +131,7 @@ La scheda "Test di sicurezza RLS (accessi consentiti e negati)" estenderà quest
 Test di `supabase/tests/alimenti_nutrizionista.sql` sulla tabella `alimenti_nutrizionista` (RF_GP_14).
 
 - **Data**: 25/11/2026, **PostgreSQL 16 locale** con lo schema `auth` simulato (non il progetto Supabase del gruppo): le migrazioni `000`–`006` si applicano senza errori e `supabase/tests/rls.sql` dà ancora **50 controlli su 50 OK**.
-- **Esito**: **11 controlli su 11 OK**.
+- **Esito**: **21 controlli su 21 OK**, comprese le scritture che l'app fa davvero: gli `upsert … on conflict do update` di "usato adesso" (non toglie la stella) e di stella, un `upsert` sulla riga di un altro nutrizionista (bloccato), l'inserimento in `alimenti` di un alimento di Open Food Facts (`creato_da` nullo) e di uno personalizzato (`creato_da` = utente), e il rifiuto di un inserimento a nome altrui o da parte di un paziente.
 - **Da ripetere sul progetto Supabase** prima della demo: SQL Editor → incolla `supabase/tests/alimenti_nutrizionista.sql` → *Run* (come `rls.sql`, in una transazione annullata) e applica prima `006_alimenti_nutrizionista.sql`.
 
 | # | Utente | Prova | Atteso |
@@ -146,5 +146,7 @@ Test di `supabase/tests/alimenti_nutrizionista.sql` sulla tabella `alimenti_nutr
 | 8 | NUT B | Non modifica le righe di NUT A | 0 |
 | 9 | NUT B | Non cancella le righe di NUT A | 0 |
 | 10 | PAZ | Non scrive recenti e preferiti | negato |
-| 11 | sistema | Senza l'alimento non restano righe orfane | 0 |
+| 11–15 | NUT A, NUT B | Upsert di "usato adesso" e di stella sulla propria riga (la stella resta); upsert sulla riga di un altro bloccato | ok / violazione RLS |
+| 16–19 | NUT A, PAZ | Inserimenti in `alimenti`: Open Food Facts e personalizzato ok; a nome di un altro o da paziente negati | ok / violazione RLS |
+| 20–21 | PAZ, sistema | Paziente non scrive recenti e preferiti; senza l'alimento non restano righe orfane | negato / 0 |
 

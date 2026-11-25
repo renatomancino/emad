@@ -49,7 +49,15 @@ class RisultatoRicerca {
 abstract interface class AlimentiRepository {
   /// Cerca prima nella cache e poi online. Con [anchePerOnline] chiama sempre
   /// il servizio online, anche se la cache ha già abbastanza risultati.
-  Future<RisultatoRicerca> cerca(String testo, {bool anchePerOnline = false});
+  ///
+  /// Se la cache ha risultati e si deve ancora attendere il servizio online,
+  /// [alRisultatoDallaCache] li riceve subito: con un servizio lento non si
+  /// aspetta (RNF_P_3, UC_GP_3: nessun blocco dell'editor).
+  Future<RisultatoRicerca> cerca(
+    String testo, {
+    bool anchePerOnline = false,
+    void Function(RisultatoRicerca dallaCache)? alRisultatoDallaCache,
+  });
 
   /// L'alimento scelto: se viene da Open Food Facts lo salva nella cache con
   /// la fonte, poi lo segna tra i recenti. Restituisce l'alimento con `id`.

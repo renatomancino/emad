@@ -18,7 +18,7 @@ class OpenFoodFactsClient implements FonteAlimentiOnline {
   OpenFoodFactsClient({
     http.Client? client,
     this.contatto = 'Cenato',
-    this.timeout = const Duration(seconds: 5),
+    this.timeout = const Duration(seconds: 4),
     this.host = 'world.openfoodfacts.org',
     this.ricercheAlMinuto = 8,
     DateTime Function()? adesso,
@@ -43,6 +43,9 @@ class OpenFoodFactsClient implements FonteAlimentiOnline {
   final DateTime Function() _adesso;
   final List<DateTime> _ricercheRecenti = [];
 
+  /// Numero dell'ultima ricerca per nome richiesta.
+  int _generazioneRicerca = 0;
+
   /// Coda delle richieste: ognuna parte quando la precedente è finita.
   Future<void> _ultima = Future<void>.value();
 
@@ -55,7 +58,7 @@ class OpenFoodFactsClient implements FonteAlimentiOnline {
   Future<List<Alimento>> cercaPerNome(String testo, {int limite = 10}) async {
     final termine = testo.trim();
     if (termine.length < _lunghezzaMinimaRicerca) return const [];
-    _rispettaLimite();
+    final generazione = ++_generazioneRicerca;
 
     final uri = Uri.https(host, '/cgi/search.pl', {
       'search_terms': termine,
@@ -72,7 +75,17 @@ class OpenFoodFactsClient implements FonteAlimentiOnline {
       'page_size': (limite * 2).clamp(10, 30).toString(),
       'fields': _campi,
     });
-    final risposta = await _richiedi(uri);
+    final risposta = await _richiedi(
+      uri,
+      // Quando tocca a questa ricerca: se ne è già partita una più nuova
+      // non serve più (non pesa nemmeno sul limite al minuto).
+      alTurno: () {
+        if (generazione != _generazioneRicerca) {
+          throw const ServizioAlimentiNonDisponibile('ricerca superata');
+        }
+        _rispettaLimite();
+      },
+    );
     final dati = _decodifica(risposta);
     final prodotti = dati['products'];
     if (prodotti is! List) {
@@ -228,12 +241,17 @@ class OpenFoodFactsClient implements FonteAlimentiOnline {
   }
 
   /// Esegue la richiesta GET dopo le precedenti (una per volta).
-  Future<http.Response> _richiedi(Uri uri, {bool ammettiNonTrovato = false}) {
+  Future<http.Response> _richiedi(
+    Uri uri, {
+    bool ammettiNonTrovato = false,
+    void Function()? alTurno,
+  }) {
     final precedente = _ultima;
     final fine = Completer<void>();
     _ultima = fine.future;
     return precedente.then((_) async {
       try {
+        alTurno?.call();
         final risposta = await _client
             .get(
               uri,

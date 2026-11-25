@@ -25,12 +25,20 @@ class _ConErrori implements AlimentiRepository {
   int daFallire;
 
   @override
-  Future<RisultatoRicerca> cerca(String testo, {bool anchePerOnline = false}) {
+  Future<RisultatoRicerca> cerca(
+    String testo, {
+    bool anchePerOnline = false,
+    void Function(RisultatoRicerca)? alRisultatoDallaCache,
+  }) {
     if (daFallire > 0) {
       daFallire--;
       throw const ErroreOperazione('Connessione non riuscita.', codice: 'rete');
     }
-    return _vero.cerca(testo, anchePerOnline: anchePerOnline);
+    return _vero.cerca(
+      testo,
+      anchePerOnline: anchePerOnline,
+      alRisultatoDallaCache: alRisultatoDallaCache,
+    );
   }
 
   @override
@@ -75,6 +83,7 @@ class _Contesto {
   final scelti = <Alimento>[];
   final creazioni = <String>[];
   final link = <Uri>[];
+  bool linkFallisce = false;
 }
 
 void main() {
@@ -103,7 +112,10 @@ void main() {
             repository: repository?.call(c) ?? c.repo,
             onScelto: c.scelti.add,
             onCreaPersonalizzato: (testo) async => c.creazioni.add(testo),
-            apriLink: (uri) async => c.link.add(uri),
+            apriLink: (uri) async {
+              if (c.linkFallisce) throw Exception('nessun browser');
+              c.link.add(uri);
+            },
           ),
         ),
       ),
@@ -204,6 +216,8 @@ void main() {
       await tester.pumpAndSettle();
       await cerca(tester, '');
       expect(find.text('Preferiti'), findsOneWidget);
+      // Un alimento preferito non si ripete tra i recenti.
+      expect(find.text('Usati di recente'), findsNothing);
       await tester.tap(find.byTooltip('Togli dai preferiti').first);
       await tester.pumpAndSettle();
       expect(find.text('Preferiti'), findsNothing);
@@ -219,7 +233,7 @@ void main() {
       c.online.nonDisponibile = true;
       await cerca(tester, 'pan'); // testo diverso: il campo rilancia la ricerca
       expect(
-        find.textContaining('Open Food Facts non risponde'),
+        find.textContaining('Non riesco a contattare Open Food Facts'),
         findsOneWidget,
       );
       expect(find.text('Pane integrale'), findsOneWidget);
@@ -270,6 +284,59 @@ void main() {
       await tester.tap(find.text('Cerca anche online'));
       await tester.pumpAndSettle();
       expect(c.online.chiamate, 1);
+    });
+
+    testWidgets(
+      'servizio lento: la cache si vede subito e poi arriva il resto',
+      (tester) async {
+        final c = await monta(tester);
+        await c.repo.creaPersonalizzato(
+          nome: 'Pane della casa',
+          kcal100g: 250,
+          proteine100g: 8,
+          carboidrati100g: 49,
+          grassi100g: 1.5,
+        );
+        c.online.ritardo = const Duration(milliseconds: 600);
+        await tester.enterText(find.byType(TextField), 'pane');
+        await tester.pump(const Duration(milliseconds: 450)); // fine attesa
+        await tester.pump(const Duration(milliseconds: 100));
+        // Il servizio non ha ancora risposto: c'è già l'alimento in cache.
+        expect(find.text('Pane della casa'), findsOneWidget);
+        expect(find.text('Pane integrale'), findsNothing);
+        expect(find.byType(LinearProgressIndicator), findsOneWidget);
+
+        await tester.pump(const Duration(milliseconds: 700));
+        await tester.pumpAndSettle();
+        expect(find.text('Pane della casa'), findsOneWidget);
+        expect(find.text('Pane integrale'), findsOneWidget);
+        expect(find.byType(LinearProgressIndicator), findsNothing);
+      },
+    );
+
+    testWidgets('una risposta vecchia non compare sotto il testo nuovo', (
+      tester,
+    ) async {
+      final c = await monta(tester);
+      c.online.ritardo = const Duration(milliseconds: 500);
+      await tester.enterText(find.byType(TextField), 'pane');
+      await tester.pump(const Duration(milliseconds: 450)); // "pane" è partita
+      await tester.enterText(find.byType(TextField), 'mela'); // testo nuovo
+      await tester.pump(const Duration(milliseconds: 600)); // arriva "pane"
+      expect(find.text('Pane integrale'), findsNothing);
+      await tester.pump(const Duration(milliseconds: 450));
+      await tester.pump(const Duration(milliseconds: 700));
+      await tester.pumpAndSettle();
+      expect(find.text('Mela'), findsOneWidget);
+      expect(find.text('Pane integrale'), findsNothing);
+    });
+
+    testWidgets('se il link non si apre lo si dice', (tester) async {
+      final c = await monta(tester);
+      c.linkFallisce = true;
+      await tester.tap(find.text('Dati: Open Food Facts (ODbL)'));
+      await tester.pumpAndSettle();
+      expect(find.text('Non riesco ad aprire il link.'), findsOneWidget);
     });
 
     testWidgets('320 dp e testo al 200%: nessun overflow', (tester) async {

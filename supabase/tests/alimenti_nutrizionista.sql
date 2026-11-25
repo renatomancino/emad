@@ -94,6 +94,38 @@ begin
   c := pg_temp.conta(nut_b, format('with d as (delete from public.alimenti_nutrizionista where alimento_id = %L returning 1) select count(*) from d', alim));
   perform pg_temp.registra('NUT B', 'Non cancella le righe di NUT A', '0', c::text, c = 0);
 
+  -- scritture che l'app fa davvero (segnaUso e impostaPreferito sono upsert)
+  r := pg_temp.esegui(nut_a, format('insert into public.alimenti_nutrizionista (nutrizionista_id, alimento_id, ultimo_uso) values (%L, %L, now()) on conflict (nutrizionista_id, alimento_id) do update set ultimo_uso = excluded.ultimo_uso', nut_a, alim));
+  perform pg_temp.registra('NUT A', 'Upsert di "usato adesso" sulla propria riga', 'ok', r, r = 'ok');
+
+  c := pg_temp.conta(nut_a, format('select count(*) from public.alimenti_nutrizionista where alimento_id = %L and preferito', alim));
+  perform pg_temp.registra('NUT A', 'L''upsert di "usato adesso" non toglie la stella', '1', c::text, c = 1);
+
+  r := pg_temp.esegui(nut_a, format('insert into public.alimenti_nutrizionista (nutrizionista_id, alimento_id, preferito) values (%L, %L, false) on conflict (nutrizionista_id, alimento_id) do update set preferito = excluded.preferito', nut_a, alim));
+  perform pg_temp.registra('NUT A', 'Upsert che toglie la stella', 'ok', r, r = 'ok');
+
+  c := pg_temp.conta(nut_a, format('select count(*) from public.alimenti_nutrizionista where alimento_id = %L and not preferito', alim));
+  perform pg_temp.registra('NUT A', 'La stella risulta tolta', '1', c::text, c = 1);
+
+  r := pg_temp.esegui(nut_b, format('insert into public.alimenti_nutrizionista (nutrizionista_id, alimento_id, preferito) values (%L, %L, true) on conflict (nutrizionista_id, alimento_id) do update set preferito = excluded.preferito', nut_a, alim));
+  perform pg_temp.registra('NUT B', 'Un upsert sulla riga di NUT A è bloccato', 'violazione RLS', r, r like '42501%');
+
+  c := pg_temp.conta(nut_a, format('select count(*) from public.alimenti_nutrizionista where alimento_id = %L and preferito', alim));
+  perform pg_temp.registra('NUT A', 'La riga di NUT A è rimasta com''era', '0', c::text, c = 0);
+
+  -- inserimenti nella cache `alimenti` come li fa l'app
+  r := pg_temp.esegui(nut_a, 'insert into public.alimenti (nome, kcal_100g, proteine_100g, carboidrati_100g, grassi_100g, fonte, creato_da) values (''Da Open Food Facts'', 100, 1, 1, 1, ''open_food_facts'', null)');
+  perform pg_temp.registra('NUT A', 'Salva in cache un alimento di Open Food Facts (creato_da nullo)', 'ok', r, r = 'ok');
+
+  r := pg_temp.esegui(nut_a, format('insert into public.alimenti (nome, kcal_100g, proteine_100g, carboidrati_100g, grassi_100g, fonte, creato_da) values (''Mio alimento'', 100, 1, 1, 1, ''personalizzato'', %L)', nut_a));
+  perform pg_temp.registra('NUT A', 'Crea un alimento personalizzato a proprio nome', 'ok', r, r = 'ok');
+
+  r := pg_temp.esegui(nut_a, format('insert into public.alimenti (nome, kcal_100g, proteine_100g, carboidrati_100g, grassi_100g, fonte, creato_da) values (''Falso'', 100, 1, 1, 1, ''personalizzato'', %L)', nut_b));
+  perform pg_temp.registra('NUT A', 'Non crea un alimento a nome di NUT B', 'violazione RLS', r, r like '42501%');
+
+  r := pg_temp.esegui(u_paz, 'insert into public.alimenti (nome, kcal_100g, proteine_100g, carboidrati_100g, grassi_100g, fonte) values (''Da paziente'', 100, 1, 1, 1, ''personalizzato'')');
+  perform pg_temp.registra('PAZ', 'Non scrive nella cache degli alimenti', 'negato', r, r <> 'ok');
+
   -- un paziente non è un nutrizionista
   r := pg_temp.esegui(u_paz, format('insert into public.alimenti_nutrizionista (nutrizionista_id, alimento_id) values (%L, %L)', u_paz, alim));
   perform pg_temp.registra('PAZ', 'Non scrive recenti e preferiti', 'negato', r, r <> 'ok');

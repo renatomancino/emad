@@ -69,19 +69,19 @@ Lo schema obbliga kcal e macro (`NOT NULL` in `alimenti`). Un risultato di Open 
 
 ### D10 · Prima la cache, poi online
 
-La ricerca guarda prima la cache (`alimenti`, per nome); con **almeno 5 risultati** non chiama Open Food Facts e offre "Cerca anche online". Con meno di 5 li completa con i risultati online, senza duplicati (stesso codice a barre, o stesso nome e marca). Si salva in cache **solo l'alimento scelto**. Se il servizio non risponde si mostrano i risultati della cache e lo si dice, senza bloccare nulla (UC_GP_3, flusso 2.2).
+La ricerca guarda prima la cache (`alimenti`, per nome); con **almeno 5 risultati** non chiama Open Food Facts e offre "Cerca anche online". Con meno di 5 li completa con i risultati online, senza duplicati (stesso codice a barre, o stesso nome e marca). Si salva in cache **solo l'alimento scelto**. Se il servizio non risponde si mostrano i risultati della cache e lo si dice, senza bloccare nulla (UC_GP_3, flusso 2.2). Se il servizio è **lento**, i risultati della cache si vedono subito (barra di avanzamento accesa) e quelli online si aggiungono appena arrivano; una risposta di una ricerca superata dal testo nuovo non compare.
 
 ### D11 · Rispetto di Open Food Facts
 
 - `User-Agent: Cenato/1.0 (Cenato)`: come contatto, il nome dell'app (scelta di Mario).
-- Una richiesta per volta, timeout di 5 s, attesa di 400 ms dopo l'ultima lettera, pagina di 20 prodotti, solo i campi necessari.
+- Una richiesta per volta, timeout di 4 s; le ricerche in coda superate da una più nuova non partono e non pesano sul limite, attesa di 400 ms dopo l'ultima lettera, pagina di 20 prodotti, solo i campi necessari.
 - **Al massimo 8 ricerche al minuto** (Open Food Facts ne accetta circa 10 per indirizzo): oltre, si usa la cache senza chiamare il servizio.
 - Ricerca solo di prodotti **venduti in Italia** (`countries = italy`, `lc=it`) e ordinati per pertinenza: i risultati di "pane" non sono più crocchette "panate" e prodotti spagnoli. Il filtro è nel client perché la ricerca di Open Food Facts guarda anche gli ingredienti.
 - Attribuzione "Dati: Open Food Facts (ODbL)" sempre visibile nella ricerca, con link (`url_launcher`; sul manifest Android la query per `https`).
 
 ### D12 · Recenti e preferiti (RF_GP_14)
 
-Tabella `alimenti_nutrizionista` (migrazione `006`): una riga per nutrizionista e alimento con `preferito` e `ultimo_uso`; RLS sulle sole righe proprie. Si segna l'uso quando l'alimento viene scelto o creato.
+Tabella `alimenti_nutrizionista` (migrazione `006`): una riga per nutrizionista e alimento con `preferito` e `ultimo_uso`; RLS sulle sole righe proprie. Si segna l'uso quando l'alimento viene scelto, creato o quando se ne tocca la stella.
 
 ### D13 · Dove si prova senza l'editor del piano
 
@@ -101,5 +101,5 @@ Il ticket indica `lib/data/open_food_facts_client.dart` e `lib/data/alimenti_rep
 | codice a barre (Nutella) | trovato | 581–647 ms |
 | "pasta", "riso" e altre, a raffica | **503** di Open Food Facts | 500–740 ms |
 
-Quando risponde, la ricerca per nome sta **sotto i 2 secondi** (RNF_P_3), ma da questo indirizzo il servizio rifiuta molte richieste con 503 (limite di ricerche o sovraccarico): è il caso "servizio non disponibile" e l'app ripiega sulla cache. **Da ripetere dal PC di Mario e da telefono**: `dart run tool/misura_ricerca.dart`.
+I tempi sono quelli del solo client verso Open Food Facts (non comprendono l'attesa di 400 ms né le due letture su Supabase). Quando risponde, la ricerca per nome sta **sotto i 2 secondi** (RNF_P_3), ma da questo indirizzo il servizio rifiuta molte richieste con 503 (limite di ricerche o sovraccarico): è il caso "servizio non disponibile" e l'app ripiega sulla cache. **Da ripetere dal PC di Mario e da telefono**: `dart run tool/misura_ricerca.dart`.
 

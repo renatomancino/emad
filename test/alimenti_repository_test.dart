@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cenato/data/alimenti_repository.dart';
@@ -16,9 +18,13 @@ class _Online implements FonteAlimentiOnline {
   bool nonDisponibile = false;
   int chiamate = 0;
 
+  /// Se impostato, la ricerca resta in attesa finché non si completa.
+  Completer<void>? attesa;
+
   @override
   Future<List<Alimento>> cercaPerNome(String testo, {int limite = 10}) async {
     chiamate++;
+    if (attesa != null) await attesa!.future;
     if (ritardo > Duration.zero) await Future<void>.delayed(ritardo);
     if (nonDisponibile) throw const ServizioAlimentiNonDisponibile('prova');
     return risultati.take(limite).toList();
@@ -138,6 +144,41 @@ void main() {
       expect(r.onlineNonDisponibile, isTrue);
     });
 
+    test(
+      'con il servizio lento i risultati della cache arrivano subito',
+      () async {
+        await riempiCache(2);
+        online.attesa = Completer<void>();
+        final parziali = <RisultatoRicerca>[];
+        var finita = false;
+        final ricerca = repo
+            .cerca('pane', alRisultatoDallaCache: parziali.add)
+            .whenComplete(() => finita = true);
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+        expect(
+          parziali.length,
+          1,
+          reason: 'cache mostrata prima della risposta',
+        );
+        expect(parziali.single.alimenti.length, 2);
+        expect(finita, isFalse, reason: 'il servizio non ha ancora risposto');
+
+        online.attesa!.complete();
+        final finale = await ricerca;
+        expect(finale.alimenti.length, greaterThan(2));
+      },
+    );
+
+    test('con la cache vuota o senza chiamata online non c\'è un risultato parziale', () async {
+      final parziali = <RisultatoRicerca>[];
+      await repo.cerca('pane', alRisultatoDallaCache: parziali.add);
+      expect(parziali, isEmpty);
+
+      await riempiCache(5);
+      await repo.cerca('pane', alRisultatoDallaCache: parziali.add);
+      expect(parziali, isEmpty, reason: 'la cache basta: nessuna attesa');
+    });
+
     test('misura la durata della ricerca', () async {
       online.ritardo = const Duration(milliseconds: 30);
       final r = await repo.cerca('pane');
@@ -254,6 +295,16 @@ void main() {
         final r = (await repo.cerca('pane')).alimenti;
         expect(r.first.id, a.id);
         expect(r.first.preferito, isTrue);
+      },
+    );
+
+    test(
+      'mettere la stella conta come un uso: compare tra i recenti',
+      () async {
+        final trovati = (await repo.cerca('pane')).alimenti;
+        final integrale = trovati.firstWhere((x) => x.nome == 'Pane integrale');
+        await repo.impostaPreferito(integrale, true);
+        expect((await repo.recenti()).map((x) => x.nome), ['Pane integrale']);
       },
     );
 

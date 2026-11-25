@@ -58,6 +58,7 @@ class _RicercaAlimentoState extends State<RicercaAlimento> {
 
   /// Cresce a ogni ricerca: le risposte di ricerche superate si scartano.
   int _versione = 0;
+  bool _ultimaAnchePerOnline = false;
   RisultatoRicerca? _risultato;
   ErroreOperazione? _errore;
   bool _inCorso = false;
@@ -96,8 +97,9 @@ class _RicercaAlimentoState extends State<RicercaAlimento> {
 
   void _alCambio(String _) {
     _attesa?.cancel();
+    // Con il testo nuovo le risposte delle ricerche precedenti non valgono più.
+    _versione++;
     if (!_pronto) {
-      _versione++;
       setState(() {
         _risultato = null;
         _errore = null;
@@ -106,13 +108,14 @@ class _RicercaAlimentoState extends State<RicercaAlimento> {
       if (_termine.isEmpty) _caricaElenchi();
       return;
     }
-    setState(() {}); // mostra il pulsante per cancellare
+    setState(() => _inCorso = false); // aggiorna anche il pulsante "cancella"
     _attesa = Timer(RicercaAlimento.attesaDigitazione, _cerca);
   }
 
   Future<void> _cerca({bool anchePerOnline = false}) async {
     final termine = _termine;
     if (termine.length < 2) return;
+    _ultimaAnchePerOnline = anchePerOnline;
     final versione = ++_versione;
     setState(() {
       _inCorso = true;
@@ -122,6 +125,11 @@ class _RicercaAlimentoState extends State<RicercaAlimento> {
       final r = await widget.repository.cerca(
         termine,
         anchePerOnline: anchePerOnline,
+        // Con il servizio lento si vede subito la cache, poi arriva il resto.
+        alRisultatoDallaCache: (dallaCache) {
+          if (!mounted || versione != _versione) return;
+          setState(() => _risultato = dallaCache);
+        },
       );
       if (!mounted || versione != _versione) return;
       setState(() {
@@ -221,10 +229,22 @@ class _RicercaAlimentoState extends State<RicercaAlimento> {
   Future<void> _apri(Uri indirizzo) async {
     final apri = widget.apriLink;
     if (apri != null) {
-      await apri(indirizzo);
+      try {
+        await apri(indirizzo);
+      } on Exception {
+        _avvisa('Non riesco ad aprire il link.');
+      }
       return;
     }
-    await launchUrl(indirizzo, mode: LaunchMode.externalApplication);
+    try {
+      final aperto = await launchUrl(
+        indirizzo,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!aperto) _avvisa('Non riesco ad aprire il link.');
+    } on Exception {
+      _avvisa('Non riesco ad aprire il link.');
+    }
   }
 
   @override
@@ -268,7 +288,10 @@ class _RicercaAlimentoState extends State<RicercaAlimento> {
 
   Widget _corpo() {
     if (_errore != null) {
-      return ErroreView(messaggio: _errore!.messaggio, onRiprova: _cerca);
+      return ErroreView(
+        messaggio: _errore!.messaggio,
+        onRiprova: () => _cerca(anchePerOnline: _ultimaAnchePerOnline),
+      );
     }
     if (!_pronto) return _elenchi();
     final r = _risultato;
@@ -292,6 +315,8 @@ class _RicercaAlimentoState extends State<RicercaAlimento> {
             : () => _creaPersonalizzato(''),
       );
     }
+    // Un alimento preferito sta solo tra i preferiti.
+    final recenti = _recenti.where((a) => !a.preferito).toList();
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       children: [
@@ -299,9 +324,9 @@ class _RicercaAlimentoState extends State<RicercaAlimento> {
           const _Titolo('Preferiti'),
           for (final a in _preferiti) _riga(a),
         ],
-        if (_recenti.isNotEmpty) ...[
+        if (recenti.isNotEmpty) ...[
           const _Titolo('Usati di recente'),
-          for (final a in _recenti) _riga(a),
+          for (final a in recenti) _riga(a),
         ],
         if (widget.onCreaPersonalizzato != null)
           _PulsanteCrea(onPressed: () => _creaPersonalizzato('')),
@@ -321,8 +346,8 @@ class _RicercaAlimentoState extends State<RicercaAlimento> {
             child: Padding(
               padding: const EdgeInsets.all(12),
               child: Text(
-                'Open Food Facts non risponde: ti mostro gli alimenti già '
-                'salvati.',
+                'Non riesco a contattare Open Food Facts: ti mostro gli alimenti '
+                'già salvati.',
                 style: testo.bodyMedium,
               ),
             ),

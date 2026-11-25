@@ -31,6 +31,7 @@ class AlimentiRepositoryImpl implements AlimentiRepository {
   Future<RisultatoRicerca> cerca(
     String testo, {
     bool anchePerOnline = false,
+    void Function(RisultatoRicerca dallaCache)? alRisultatoDallaCache,
   }) async {
     final termine = testo.trim();
     if (termine.length < _lunghezzaMinimaRicerca) {
@@ -44,6 +45,13 @@ class AlimentiRepositoryImpl implements AlimentiRepository {
         alimenti: inCache,
         onlineSaltato: true,
         durata: orologio.elapsed,
+      );
+    }
+
+    // La cache è già pronta: si mostra subito, senza aspettare il servizio.
+    if (inCache.isNotEmpty) {
+      alRisultatoDallaCache?.call(
+        RisultatoRicerca(alimenti: inCache, durata: orologio.elapsed),
       );
     }
 
@@ -136,5 +144,7 @@ class AlimentiRepositoryImpl implements AlimentiRepository {
         ? await _salvaSeCompleto(alimento)
         : alimento;
     await cache.impostaPreferito(salvato.id!, preferito);
+    // Toccare la stella è un uso dell'alimento: compare tra i recenti.
+    await cache.segnaUso(salvato.id!);
   }
 }

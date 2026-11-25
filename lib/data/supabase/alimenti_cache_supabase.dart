@@ -13,19 +13,23 @@ typedef UsoAlimento = ({bool preferito, DateTime? ultimoUso});
 /// nutrizionista, recenti e preferiti in `alimenti_nutrizionista`. L'accesso
 /// è deciso dalle policy RLS (002 e 006).
 class AlimentiCacheSupabase implements AlimentiCache {
-  AlimentiCacheSupabase(this._db);
+  /// [idUtente] restituisce l'id dell'utente connesso (predefinito: quello
+  /// della sessione Supabase); lo si passa nei test.
+  AlimentiCacheSupabase(this._db, {String? Function()? idUtente})
+    : _idUtente = idUtente ?? (() => _db.auth.currentUser?.id);
 
   final SupabaseClient _db;
+  final String? Function() _idUtente;
 
   String get _utente {
-    final utente = _db.auth.currentUser;
-    if (utente == null) {
+    final id = _idUtente();
+    if (id == null) {
       throw const ErroreOperazione(
         'Sessione scaduta: accedi di nuovo.',
         codice: 'sessione',
       );
     }
-    return utente.id;
+    return id;
   }
 
   Future<T> _chiama<T>(Future<T> Function() f) async {
@@ -76,7 +80,7 @@ class AlimentiCacheSupabase implements AlimentiCache {
             .select()
             .ilike('nome', '%${escapeLike(t)}%')
             .order('nome')
-            .limit(50);
+            .limit(200);
         final alimenti = [for (final r in righe) Alimento.daRiga(r)];
         if (alimenti.isEmpty) return alimenti;
 

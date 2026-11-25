@@ -264,12 +264,17 @@ void main() {
         if (inVolo > massimo) massimo = inVolo;
         await Future<void>.delayed(const Duration(milliseconds: 30));
         inVolo--;
-        return _json(_fixture('off_ricerca_pane_italia.json'));
+        return r.url.path.contains('/api/v2/product/')
+            ? _json(_fixture('off_prodotto_3017620422003.json'))
+            : _json(_fixture('off_ricerca_pane_italia.json'));
       });
+      final prima = client.cercaPerNome('pane');
+      await Future<void>.delayed(Duration.zero); // la ricerca è in volo
       await Future.wait([
-        client.cercaPerNome('pane'),
-        client.cercaPerNome('latte'),
-        client.cercaPerNome('riso'),
+        prima,
+        client.perCodiceBarre('3017620422003'),
+        client.perCodiceBarre('8076800195057'),
+        client.perCodiceBarre('8000500310427'),
       ]);
       expect(massimo, 1);
     });
@@ -286,6 +291,63 @@ void main() {
         throwsA(isA<ServizioAlimentiNonDisponibile>()),
       );
       expect(await client.cercaPerNome('pane'), isNotEmpty);
+    });
+  });
+
+  group('Ricerche superate', () {
+    test('quelle in coda scavalcate da una più nuova non partono', () async {
+      final blocco = Completer<void>();
+      final richieste = <String>[];
+      final client = _client((r) async {
+        richieste.add(r.url.queryParameters['search_terms']!);
+        if (richieste.length == 1) await blocco.future;
+        return _json(_fixture('off_ricerca_pane_italia.json'));
+      });
+
+      final a = client.cercaPerNome('pane');
+      await Future<void>.delayed(Duration.zero); // "pane" è in volo
+      final b = client.cercaPerNome('pane cereali');
+      final c = client.cercaPerNome('pane di segale');
+      final esitoB = expectLater(
+        b,
+        throwsA(isA<ServizioAlimentiNonDisponibile>()),
+      );
+      blocco.complete();
+
+      await a;
+      await esitoB;
+      expect(await c, isNotEmpty);
+      expect(richieste, [
+        'pane',
+        'pane di segale',
+      ], reason: '"pane cereali" mai spedita');
+    });
+
+    test('una ricerca superata non consuma il limite al minuto', () async {
+      final blocco = Completer<void>();
+      var richieste = 0;
+      final client = OpenFoodFactsClient(
+        client: MockClient((r) async {
+          richieste++;
+          if (richieste == 1) await blocco.future;
+          return _json(_fixture('off_ricerca_pane_italia.json'));
+        }),
+        ricercheAlMinuto: 2,
+      );
+      final a = client.cercaPerNome('pane');
+      await Future<void>.delayed(Duration.zero);
+      final b = client.cercaPerNome('pane cereali');
+      final c = client.cercaPerNome('pane di segale');
+      final esitoB = expectLater(
+        b,
+        throwsA(isA<ServizioAlimentiNonDisponibile>()),
+      );
+      blocco.complete();
+      await a;
+      await esitoB;
+      // Con un limite di 2: "pane" e "pane di segale" bastano, l'altra non ha pesato.
+      expect(await c, isNotEmpty);
+      expect(richieste, 2);
     });
   });
 
