@@ -58,3 +58,59 @@ Minimo 8 caratteri, con almeno una lettera e una cifra (`Validazione.password`).
 ### D8 · Profilo
 
 Il nutrizionista modifica nome e titolo; il paziente nome, altezza, data di nascita e obiettivo (dati usati dalle altre sezioni). Il ruolo e l'email non si cambiano: il ruolo è immutabile per trigger (`docs/supabase.md`).
+
+## Fase 2 · Ricerca alimenti (Open Food Facts) con cache
+
+Scheda Trello: *Ricerca alimenti (Open Food Facts) con cache* (UC_GP_3, UC_GP_2, RF_GP_3, RF_GP_5, RF_GP_14, RNF_IN_1, RNF_P_3, RNF_L_5). Decisioni 1–5 del 25/11/2026 confermate da Mario Celzo ("ok proposte").
+
+### D9 · Alimenti con dati incompleti non finiscono in cache
+
+Lo schema obbliga kcal e macro (`NOT NULL` in `alimenti`). Un risultato di Open Food Facts senza tutti i valori si **mostra con "Dati incompleti"**, non si può scegliere e non si salva; l'app propone **"Completa a mano"**, che apre il modulo dell'alimento personalizzato con il nome già scritto. Così la cache contiene solo alimenti completi ("non salvare in cache come completi", ticket). Valori fuori scala (kcal oltre 900, macro oltre 100 g su 100 g) contano come mancanti; se le kcal mancano o sono assurde si ricavano dai kJ (1 kcal = 4,184 kJ). Caso vero trovato: un pane con 1289 kcal e 950 kJ.
+
+### D10 · Prima la cache, poi online
+
+La ricerca guarda prima la cache (`alimenti`, per nome); con **almeno 5 risultati** non chiama Open Food Facts e offre "Cerca anche online". Con meno di 5 li completa con i risultati online, senza duplicati (stesso codice a barre, o stesso nome e marca). Si salva in cache **solo l'alimento scelto**. Se il servizio non risponde si mostrano i risultati della cache e lo si dice, senza bloccare nulla (UC_GP_3, flusso 2.2). Se il servizio è **lento**, i risultati della cache si vedono subito (barra di avanzamento accesa) e quelli online si aggiungono appena arrivano; una risposta di una ricerca superata dal testo nuovo non compare.
+
+### D11 · Rispetto di Open Food Facts
+
+- `User-Agent: Cenato/1.0 (Cenato)`: come contatto, il nome dell'app (scelta di Mario).
+- Una richiesta per volta, timeout di 4 s; le ricerche in coda superate da una più nuova non partono e non pesano sul limite, attesa di 400 ms dopo l'ultima lettera, pagina di 20 prodotti, solo i campi necessari.
+- **Al massimo 8 ricerche al minuto** (Open Food Facts ne accetta circa 10 per indirizzo): oltre, si usa la cache senza chiamare il servizio.
+- Ricerca solo di prodotti **venduti in Italia** (`countries = italy`, `lc=it`) e ordinati per pertinenza: i risultati di "pane" non sono più crocchette "panate" e prodotti spagnoli. Il filtro è nel client perché la ricerca di Open Food Facts guarda anche gli ingredienti.
+- Attribuzione "Dati: Open Food Facts (ODbL)" sempre visibile nella ricerca, con link (`url_launcher`; sul manifest Android la query per `https`).
+
+### D12 · Recenti e preferiti (RF_GP_14)
+
+Tabella `alimenti_nutrizionista` (migrazione `006`): una riga per nutrizionista e alimento con `preferito` e `ultimo_uso`; RLS sulle sole righe proprie. Si segna l'uso quando l'alimento viene scelto, creato o quando se ne tocca la stella.
+
+### D13 · Dove si prova senza l'editor del piano
+
+L'editor non esiste ancora. Finché non c'è, la ricerca si raggiunge dal **profilo del nutrizionista → "Alimenti"** (`/nutrizionista/profilo/alimenti`) con il widget `RicercaAlimento`, che l'editor riuserà.
+
+### D14 · Struttura dei file
+
+Il ticket indica `lib/data/open_food_facts_client.dart` e `lib/data/alimenti_repository.dart`. Si è seguita la struttura a livelli del repository: interfacce e modello in `domain/`, client in `data/open_food_facts/` (cartella già prevista), logica in `data/alimenti_repository.dart`, cache su Supabase in `data/supabase/`, versioni finte in `data/finto/`.
+
+### D15 · Chi vede e chi modifica gli alimenti (migrazione 007)
+
+Scelta di Mario Celzo ("completamente d'accordo"). Prima (002) ogni utente autenticato leggeva ogni alimento e **qualsiasi nutrizionista poteva modificare i valori degli alimenti di Open Food Facts**, cioè di una cache condivisa. Ora:
+
+- **Open Food Facts:** li legge chiunque sia autenticato (dati pubblici ODbL); nessun client li modifica, l'app li inserisce soltanto.
+- **Personalizzati:** li vede e li modifica solo chi li ha creato. Il **paziente** li vede solo se compaiono, come voce o come alternativa, in un piano che può leggere (gli servono per la sezione Dieta); una bozza non conta.
+- **Senza proprietario** (`creato_da` nullo, i dati di prova del seed): restano leggibili da tutti, così la demo non cambia.
+- Inserimenti: un alimento di Open Food Facts con `creato_da` nullo (o proprio); uno personalizzato solo a proprio nome.
+
+Prove in `supabase/tests/alimenti_visibilita.sql`: 23 controlli, con le vecchie policy 7 falliscono.
+
+### Tempi misurati (25/11/2026, dal container di sviluppo, `dart run tool/misura_ricerca.dart`)
+
+| Ricerca | Esito | Tempo |
+|---|---|---|
+| "pane" | 10 risultati | 1318 ms |
+| "latte" | 10 risultati | 1392 ms |
+| "mela" | 10 risultati | 1241 ms |
+| codice a barre (Nutella) | trovato | 581–647 ms |
+| "pasta", "riso" e altre, a raffica | **503** di Open Food Facts | 500–740 ms |
+
+I tempi sono quelli del solo client verso Open Food Facts (non comprendono l'attesa di 400 ms né le due letture su Supabase). Quando risponde, la ricerca per nome sta **sotto i 2 secondi** (RNF_P_3), ma da questo indirizzo il servizio rifiuta molte richieste con 503 (limite di ricerche o sovraccarico): è il caso "servizio non disponibile" e l'app ripiega sulla cache. **Da ripetere dal PC di Mario e da telefono**: `dart run tool/misura_ricerca.dart`.
+

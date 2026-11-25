@@ -125,3 +125,54 @@ Le funzioni di supporto alle policy stanno nello schema `privato`, non esposto d
 ## Da completare in fase 6
 
 La scheda "Test di sicurezza RLS (accessi consentiti e negati)" estenderà questi casi a tutte le tabelle e a tutte le combinazioni, compresi i pazienti archiviati con storico e la cancellazione dell'account (RF_GA_7).
+
+## Migrazione 006: recenti e preferiti degli alimenti
+
+Test di `supabase/tests/alimenti_nutrizionista.sql` sulla tabella `alimenti_nutrizionista` (RF_GP_14).
+
+- **Data**: 25/11/2026, **PostgreSQL 16 locale** con lo schema `auth` simulato (non il progetto Supabase del gruppo): le migrazioni `000`–`006` si applicano senza errori e `supabase/tests/rls.sql` dà ancora **50 controlli su 50 OK**.
+- **Esito**: **21 controlli su 21 OK**, comprese le scritture che l'app fa davvero: gli `upsert … on conflict do update` di "usato adesso" (non toglie la stella) e di stella, un `upsert` sulla riga di un altro nutrizionista (bloccato), l'inserimento in `alimenti` di un alimento di Open Food Facts (`creato_da` nullo) e di uno personalizzato (`creato_da` = utente), e il rifiuto di un inserimento a nome altrui o da parte di un paziente.
+- **Da ripetere sul progetto Supabase** prima della demo: SQL Editor → incolla `supabase/tests/alimenti_nutrizionista.sql` → *Run* (come `rls.sql`, in una transazione annullata) e applica prima `006_alimenti_nutrizionista.sql`.
+
+| # | Utente | Prova | Atteso |
+|---|---|---|---|
+| 1 | anonimo | Non legge recenti e preferiti | negato |
+| 2 | NUT A | Segna un alimento tra i recenti | ok |
+| 3 | NUT A | Non scrive una riga a nome di NUT B | violazione RLS |
+| 4 | NUT A | Una sola riga per coppia nutrizionista-alimento | chiave duplicata |
+| 5 | NUT A | Vede le proprie righe | 1 |
+| 6 | NUT A | Mette la stella al proprio alimento | 1 |
+| 7 | NUT B | Non vede le righe di NUT A | 0 |
+| 8 | NUT B | Non modifica le righe di NUT A | 0 |
+| 9 | NUT B | Non cancella le righe di NUT A | 0 |
+| 10 | PAZ | Non scrive recenti e preferiti | negato |
+| 11–15 | NUT A, NUT B | Upsert di "usato adesso" e di stella sulla propria riga (la stella resta); upsert sulla riga di un altro bloccato | ok / violazione RLS |
+| 16–19 | NUT A, PAZ | Inserimenti in `alimenti`: Open Food Facts e personalizzato ok; a nome di un altro o da paziente negati | ok / violazione RLS |
+| 20–21 | PAZ, sistema | Paziente non scrive recenti e preferiti; senza l'alimento non restano righe orfane | negato / 0 |
+
+## Migrazione 007: visibilità e modifica degli alimenti
+
+Test di `supabase/tests/alimenti_visibilita.sql` sulle policy di `alimenti` (RF_GP_3, RF_GP_5, RNF_IN_1).
+
+- **Data**: 25/11/2026, **PostgreSQL 16 locale** con lo schema `auth` simulato.
+- **Esito**: **23 controlli su 23 OK**. Rimettendo le policy di `002_rls.sql`, 7 controlli diventano KO (un nutrizionista vede gli alimenti di un altro e modifica quelli di Open Food Facts): il test misura davvero la modifica.
+- Dopo la 007 restano **50 su 50** per `rls.sql` e **21 su 21** per `alimenti_nutrizionista.sql`.
+- **Da ripetere sul progetto Supabase del gruppo**: applica `007_alimenti_visibilita.sql` (dopo la `006`) e lancia i tre script come descritto in `docs/prova-alimenti.md`.
+
+| Utente | Prova | Atteso |
+|---|---|---|
+| anonimo | Non legge la cache | negato |
+| NUT A, NUT B | Vedono gli alimenti di Open Food Facts | 1 |
+| NUT A | Vede i propri personalizzati; non quelli di NUT B | 1 / 0 |
+| NUT B | Non vede i personalizzati di NUT A | 0 |
+| NUT A, NUT B | Vedono quelli senza proprietario (seed) | 1 |
+| PAZ A1 | Vede i personalizzati del proprio piano (voce e alternativa) | 1 |
+| PAZ A1 | Non vede alimenti fuori dal piano, in una bozza o di un altro nutrizionista | 0 |
+| PAZ B1 | Non vede gli alimenti del piano di un altro | 0 |
+| NUT A | Modifica un proprio personalizzato | 1 |
+| NUT A, NUT B | Non modificano quelli di Open Food Facts né quelli altrui | 0 |
+| PAZ A1 | Non modifica | 0 |
+| NUT A | Salva un alimento di Open Food Facts e ne crea uno personalizzato a proprio nome | ok |
+| NUT A | Non crea uno personalizzato senza proprietario né a nome di NUT B | violazione RLS |
+| PAZ A1 | Non scrive nella cache | negato |
+
