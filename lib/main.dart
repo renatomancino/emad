@@ -6,7 +6,10 @@ import 'core/costanti/testi.dart';
 import 'core/dipendenze.dart';
 import 'core/router/router.dart';
 import 'core/tema/tema.dart';
+import 'data/alimenti_repository.dart';
 import 'data/finto/dipendenze_finte.dart';
+import 'data/open_food_facts/open_food_facts_client.dart';
+import 'data/supabase/alimenti_cache_supabase.dart';
 import 'data/supabase/collegamento_repository_supabase.dart';
 import 'data/supabase/pazienti_repository_supabase.dart';
 import 'data/supabase/profilo_repository_supabase.dart';
@@ -59,6 +62,10 @@ Future<void> main() async {
         abbonamento: AbbonamentoRepositorySupabase(db),
         collegamento: CollegamentoRepositorySupabase(db),
         profilo: ProfiloRepositorySupabase(db, auth),
+        alimenti: AlimentiRepositoryImpl(
+          cache: AlimentiCacheSupabase(db),
+          online: OpenFoodFactsClient(),
+        ),
       ),
     ),
   );

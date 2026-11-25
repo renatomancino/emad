@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../../domain/modelli/alimento.dart';
+import '../../domain/regole/validazione_alimento.dart';
 import '../../domain/repository/alimenti_repository.dart';
 
 /// Client dell'API di Open Food Facts (RNF_IN_1, licenza ODbL).
@@ -19,7 +20,10 @@ class OpenFoodFactsClient implements FonteAlimentiOnline {
     this.contatto = 'Cenato',
     this.timeout = const Duration(seconds: 5),
     this.host = 'world.openfoodfacts.org',
-  }) : _client = client ?? http.Client();
+    this.ricercheAlMinuto = 8,
+    DateTime Function()? adesso,
+  }) : _client = client ?? http.Client(),
+       _adesso = adesso ?? DateTime.now;
 
   /// Recapito del progetto nel `User-Agent` (il nome dell'app).
   final String contatto;
@@ -29,7 +33,15 @@ class OpenFoodFactsClient implements FonteAlimentiOnline {
   final Duration timeout;
 
   final String host;
+
+  /// Ricerche per nome consentite in un minuto. Open Food Facts ne accetta
+  /// circa 10 per indirizzo: si resta sotto, e oltre il limite si usa la
+  /// cache senza chiamare il servizio.
+  final int ricercheAlMinuto;
+
   final http.Client _client;
+  final DateTime Function() _adesso;
+  final List<DateTime> _ricercheRecenti = [];
 
   /// Coda delle richieste: ognuna parte quando la precedente è finita.
   Future<void> _ultima = Future<void>.value();
@@ -43,6 +55,7 @@ class OpenFoodFactsClient implements FonteAlimentiOnline {
   Future<List<Alimento>> cercaPerNome(String testo, {int limite = 10}) async {
     final termine = testo.trim();
     if (termine.length < _lunghezzaMinimaRicerca) return const [];
+    _rispettaLimite();
 
     final uri = Uri.https(host, '/cgi/search.pl', {
       'search_terms': termine,
@@ -50,6 +63,10 @@ class OpenFoodFactsClient implements FonteAlimentiOnline {
       'action': 'process',
       'json': '1',
       'lc': 'it',
+      // Solo prodotti venduti in Italia: nomi in italiano e meno rumore.
+      'tagtype_0': 'countries',
+      'tag_contains_0': 'contains',
+      'tag_0': 'italy',
       'sort_by': 'unique_scans_n',
       // Qualche risultato in più: alcuni verranno scartati o fusi.
       'page_size': (limite * 2).clamp(10, 30).toString(),
@@ -63,7 +80,7 @@ class OpenFoodFactsClient implements FonteAlimentiOnline {
     }
 
     final visti = <String>{};
-    final risultati = <Alimento>[];
+    final candidati = <Alimento>[];
     for (final p in prodotti) {
       if (p is! Map<String, dynamic>) continue;
       final alimento = alimentoDaProdotto(p);
@@ -71,10 +88,66 @@ class OpenFoodFactsClient implements FonteAlimentiOnline {
       final chiave =
           '${alimento.nome.toLowerCase()}|${(alimento.marca ?? '').toLowerCase()}';
       if (!visti.add(chiave)) continue;
-      risultati.add(alimento);
-      if (risultati.length == limite) break;
+      candidati.add(alimento);
     }
-    return risultati;
+    return _perPertinenza(candidati, termine).take(limite).toList();
+  }
+
+  void _rispettaLimite() {
+    final adesso = _adesso();
+    _ricercheRecenti.removeWhere(
+      (t) => adesso.difference(t) >= const Duration(minutes: 1),
+    );
+    if (_ricercheRecenti.length >= ricercheAlMinuto) {
+      throw const ServizioAlimentiNonDisponibile('limite di richieste');
+    }
+    _ricercheRecenti.add(adesso);
+  }
+
+  /// Minuscole e senza accenti, per confrontare nomi e testo cercato.
+  static String normalizza(String testo) {
+    const da = 'àáâäèéêëìíîïòóôöùúûüçñ';
+    const a = 'aaaaeeeeiiiioooouuuucn';
+    final buffer = StringBuffer();
+    for (final c in testo.toLowerCase().split('')) {
+      final i = da.indexOf(c);
+      buffer.write(i < 0 ? c : a[i]);
+    }
+    return buffer.toString();
+  }
+
+  /// Tiene i prodotti il cui nome (o marca) contiene tutte le parole cercate e
+  /// mette per primi quelli che iniziano per la prima parola, poi quelli in
+  /// cui una parola inizia così, infine gli altri. La ricerca di Open Food
+  /// Facts guarda anche gli ingredienti e restituirebbe, per "pane", le
+  /// crocchette "panate": qui si scartano.
+  static List<Alimento> _perPertinenza(
+    List<Alimento> alimenti,
+    String termine,
+  ) {
+    final parole = normalizza(termine)
+        .split(RegExp(r'\s+'))
+        .where((p) => p.isNotEmpty)
+        .toList();
+    if (parole.isEmpty) return alimenti;
+    final punteggi = <(int, int, Alimento)>[];
+    for (var i = 0; i < alimenti.length; i++) {
+      final a = alimenti[i];
+      final nome = normalizza(a.nome);
+      final tutto = '$nome ${normalizza(a.marca ?? '')}';
+      if (!parole.every(tutto.contains)) continue;
+      final inizio = RegExp('(^|[^a-z0-9])${RegExp.escape(parole.first)}');
+      final punteggio = nome.startsWith(parole.first)
+          ? 0
+          : (inizio.hasMatch(nome) ? 1 : 2);
+      punteggi.add((punteggio, i, a));
+    }
+    // L'indice mantiene l'ordine di Open Food Facts a parità di punteggio.
+    punteggi.sort((x, y) {
+      final c = x.$1.compareTo(y.$1);
+      return c != 0 ? c : x.$2.compareTo(y.$2);
+    });
+    return [for (final p in punteggi) p.$3];
   }
 
   @override
@@ -106,20 +179,25 @@ class OpenFoodFactsClient implements FonteAlimentiOnline {
     final nutrienti = prodotto['nutriments'];
     final n = nutrienti is Map<String, dynamic> ? nutrienti : const {};
 
-    double? valore(String chiave) {
+    // Valori fuori scala (errori frequenti nei dati) diventano "mancanti".
+    double? valore(String chiave, double massimo) {
       final v = n[chiave];
       final d = switch (v) {
         num x => x.toDouble(),
         String s => double.tryParse(s),
         _ => null,
       };
-      if (d == null || d < 0 || d.isNaN) return null;
+      if (d == null || d.isNaN || d < 0 || d > massimo) return null;
       return (d * 10).round() / 10;
     }
 
-    double? kcal = valore('energy-kcal_100g');
+    double? macro(String chiave) =>
+        valore(chiave, ValidazioneAlimento.macroMax);
+
+    // Se le kcal mancano o sono assurde si ricavano dai kJ (1 kcal = 4,184 kJ).
+    double? kcal = valore('energy-kcal_100g', ValidazioneAlimento.kcalMax);
     if (kcal == null) {
-      final kj = valore('energy_100g');
+      final kj = valore('energy_100g', ValidazioneAlimento.kcalMax * 4.184);
       if (kj != null) kcal = (kj / 4.184 * 10).round() / 10;
     }
 
@@ -132,9 +210,9 @@ class OpenFoodFactsClient implements FonteAlimentiOnline {
           ? codice
           : null,
       kcal100g: kcal,
-      proteine100g: valore('proteins_100g'),
-      carboidrati100g: valore('carbohydrates_100g'),
-      grassi100g: valore('fat_100g'),
+      proteine100g: macro('proteins_100g'),
+      carboidrati100g: macro('carbohydrates_100g'),
+      grassi100g: macro('fat_100g'),
       fonte: FonteAlimento.openFoodFacts,
     );
   }

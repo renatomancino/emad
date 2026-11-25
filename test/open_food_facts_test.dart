@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -24,28 +25,27 @@ OpenFoodFactsClient _client(
 
 void main() {
   group('Ricerca per nome: richiesta', () {
-    test(
-      'usa lingua italiana, pochi campi, pagina piccola e User-Agent',
-      () async {
-        late http.Request vista;
-        final client = _client((r) async {
-          vista = r;
-          return _json(_fixture('off_ricerca_pane.json'));
-        });
-        await client.cercaPerNome('pane', limite: 8);
+    test('usa lingua italiana, prodotti venduti in Italia, pochi campi e User-Agent', () async {
+      late http.Request vista;
+      final client = _client((r) async {
+        vista = r;
+        return _json(_fixture('off_ricerca_pane_italia.json'));
+      });
+      await client.cercaPerNome('pane', limite: 8);
 
-        expect(vista.url.host, 'world.openfoodfacts.org');
-        expect(vista.url.path, '/cgi/search.pl');
-        final q = vista.url.queryParameters;
-        expect(q['search_terms'], 'pane');
-        expect(q['json'], '1');
-        expect(q['lc'], 'it');
-        expect(q['page_size'], isNotNull);
-        expect(int.parse(q['page_size']!), lessThanOrEqualTo(30));
-        expect(q['fields'], contains('nutriments'));
-        expect(vista.headers['User-Agent'], 'Cenato/1.0 (Cenato)');
-      },
-    );
+      expect(vista.url.host, 'world.openfoodfacts.org');
+      expect(vista.url.path, '/cgi/search.pl');
+      final q = vista.url.queryParameters;
+      expect(q['search_terms'], 'pane');
+      expect(q['json'], '1');
+      expect(q['lc'], 'it');
+      expect(q['tagtype_0'], 'countries');
+      expect(q['tag_contains_0'], 'contains');
+      expect(q['tag_0'], 'italy');
+      expect(int.parse(q['page_size']!), lessThanOrEqualTo(30));
+      expect(q['fields'], contains('nutriments'));
+      expect(vista.headers['User-Agent'], 'Cenato/1.0 (Cenato)');
+    });
 
     test('il contatto nel User-Agent si può cambiare', () {
       final client = OpenFoodFactsClient(contatto: 'progetto Cenato');
@@ -67,55 +67,153 @@ void main() {
     );
   });
 
-  group('Ricerca per nome: risposta', () {
-    late List<Alimento> trovati;
-
-    setUp(() async {
+  group('Ricerca per nome: risposta vera (pane, prodotti italiani)', () {
+    Future<List<Alimento>> cerca(
+      String termine, {
+      int limite = 20,
+      String fixture = 'off_ricerca_pane_italia.json',
+      String Function(String corpo)? modifica,
+    }) {
+      final corpo = _fixture(fixture);
       final client = _client(
-        (r) async => _json(_fixture('off_ricerca_pane.json')),
+        (r) async => _json(modifica == null ? corpo : modifica(corpo)),
       );
-      trovati = await client.cercaPerNome('pane', limite: 20);
-    });
+      return client.cercaPerNome(termine, limite: limite);
+    }
 
-    test('valori per 100 g, nome in italiano e marca principale', () {
-      final spaghetti = trovati.firstWhere(
-        (a) => a.codiceBarre == '8076800195057',
+    /// Applica [f] ai prodotti della risposta e la riserializza.
+    String Function(String) tocca(void Function(List<dynamic> prodotti) f) =>
+        (corpo) {
+          final dati = jsonDecode(corpo) as Map<String, dynamic>;
+          f(dati['products'] as List<dynamic>);
+          return jsonEncode(dati);
+        };
+
+    test('valori per 100 g, nome in italiano e marca principale', () async {
+      final trovati = await cerca('pane');
+      final integrale = trovati.firstWhere(
+        (a) => a.codiceBarre == '8001120895424',
       );
-      expect(spaghetti.nome, 'Spaghetti n.5');
-      expect(spaghetti.marca, 'Barilla');
-      expect(spaghetti.kcal100g, 359);
-      expect(spaghetti.proteine100g, 13);
-      expect(spaghetti.carboidrati100g, 71);
-      expect(spaghetti.grassi100g, 2);
-      expect(spaghetti.fonte, FonteAlimento.openFoodFacts);
-      expect(spaghetti.completo, isTrue);
-      expect(spaghetti.id, isNull);
+      expect(integrale.nome, 'Pane integrale');
+      expect(integrale.marca, 'Coop');
+      expect(integrale.kcal100g, 256);
+      expect(integrale.proteine100g, 9.7);
+      expect(integrale.carboidrati100g, 41);
+      expect(integrale.grassi100g, 4.3);
+      expect(integrale.fonte, FonteAlimento.openFoodFacts);
+      expect(integrale.completo, isTrue);
+      expect(integrale.id, isNull);
     });
 
-    test('un prodotto senza kcal è segnalato come incompleto', () {
-      final senzaDati = trovati.firstWhere((a) => a.nome == 'Pasta senza dati');
-      expect(senzaDati.kcal100g, isNull);
-      expect(senzaDati.completo, isFalse);
+    test('tiene solo i prodotti pertinenti, quelli che iniziano per "pane" per primi', () async {
+      final trovati = await cerca('pane');
+      expect(trovati.first.nome.toLowerCase(), startsWith('pane'));
+      for (final a in trovati) {
+        final testo = OpenFoodFactsClient.normalizza(
+          '${a.nome} ${a.marca ?? ''}',
+        );
+        expect(testo, contains('pane'), reason: a.nome);
+      }
+      // "Wasa delicate crisp", "Piadelle classiche", "1/2 baguette": scartati.
+      expect(trovati.any((a) => a.nome.startsWith('Wasa')), isFalse);
+      expect(trovati.any((a) => a.nome.startsWith('Piadelle')), isFalse);
+      // Un nome in cui "pane" è dentro una parola resta, ma dopo.
+      final croq = trovati.indexWhere((a) => a.nome.contains('CROQ'));
+      final integrale = trovati.indexWhere((a) => a.nome == 'Pane integrale');
+      expect(croq, greaterThan(integrale));
     });
 
-    test('se mancano le kcal ma ci sono i kJ si convertono', () {
-      final soloKj = trovati.firstWhere((a) => a.nome == 'Pasta solo kJ');
-      expect(soloKj.kcal100g, closeTo(1500 / 4.184, 0.1));
-      expect(soloKj.completo, isTrue);
+    test('un prodotto senza nome si scarta', () async {
+      final trovati = await cerca('pane');
+      expect(trovati.any((a) => a.codiceBarre == '8076809542029'), isFalse);
     });
 
-    test('i prodotti senza nome si scartano e i duplicati si fondono', () {
-      expect(trovati.any((a) => a.codiceBarre == '9999999999993'), isFalse);
-      final spaghetti = trovati.where((a) => a.nome == 'Spaghetti n.5');
-      expect(spaghetti.length, 1);
+    test('kcal assurde (1289 per 100 g): si usano i kJ', () async {
+      final trovati = await cerca('pane');
+      final tastino = trovati.firstWhere((a) => a.marca == 'Tastino');
+      expect(tastino.kcal100g, closeTo(950 / 4.184, 0.1));
+      expect(tastino.completo, isTrue);
+    });
+
+    test('un prodotto senza kcal né kJ è segnalato come incompleto', () async {
+      final trovati = await cerca(
+        'pane',
+        modifica: tocca((prodotti) {
+          for (final p in prodotti) {
+            if (p['code'] == '8001120895424') {
+              (p['nutriments'] as Map).removeWhere(
+                (k, _) => (k as String).startsWith('energy'),
+              );
+            }
+          }
+        }),
+      );
+      final integrale = trovati.firstWhere((a) => a.nome == 'Pane integrale');
+      expect(integrale.kcal100g, isNull);
+      expect(integrale.completo, isFalse);
+    });
+
+    test('se mancano le kcal ma ci sono i kJ si convertono', () async {
+      final trovati = await cerca(
+        'pane',
+        modifica: tocca((prodotti) {
+          for (final p in prodotti) {
+            if (p['code'] == '8001120895424') {
+              (p['nutriments'] as Map)
+                ..remove('energy-kcal_100g')
+                ..remove('energy-kcal');
+            }
+          }
+        }),
+      );
+      final integrale = trovati.firstWhere((a) => a.nome == 'Pane integrale');
+      expect(integrale.kcal100g, closeTo(1079 / 4.184, 0.1));
+    });
+
+    test('macro oltre 100 g su 100 g non sono validi: incompleto', () async {
+      final trovati = await cerca(
+        'pane',
+        modifica: tocca((prodotti) {
+          for (final p in prodotti) {
+            if (p['code'] == '8001120895424') {
+              (p['nutriments'] as Map)['proteins_100g'] = 450;
+            }
+          }
+        }),
+      );
+      final integrale = trovati.firstWhere((a) => a.nome == 'Pane integrale');
+      expect(integrale.proteine100g, isNull);
+      expect(integrale.completo, isFalse);
+    });
+
+    test('stesso nome e stessa marca: un solo risultato', () async {
+      final trovati = await cerca(
+        'pane',
+        modifica: tocca((prodotti) {
+          final copia = jsonDecode(
+            jsonEncode(
+              prodotti.firstWhere((p) => p['code'] == '8001120895424'),
+            ),
+          ) as Map<String, dynamic>;
+          copia['code'] = '9999999999999';
+          prodotti.add(copia);
+        }),
+      );
+      expect(trovati.where((a) => a.nome == 'Pane integrale').length, 1);
+    });
+
+    test('lo stesso nome con marche diverse resta (Pane di segale)', () async {
+      final trovati = await cerca('pane');
+      expect(trovati.where((a) => a.nome == 'Pane di segale').length, 2);
     });
 
     test('il numero di risultati rispetta il limite', () async {
-      final client = _client(
-        (r) async => _json(_fixture('off_ricerca_pane.json')),
-      );
-      final pochi = await client.cercaPerNome('pane', limite: 2);
-      expect(pochi.length, 2);
+      expect((await cerca('pane', limite: 3)).length, 3);
+    });
+
+    test('la ricerca ignora maiuscole e accenti', () async {
+      final trovati = await cerca('PANÉ');
+      expect(trovati, isNotEmpty);
     });
   });
 
@@ -166,7 +264,7 @@ void main() {
         if (inVolo > massimo) massimo = inVolo;
         await Future<void>.delayed(const Duration(milliseconds: 30));
         inVolo--;
-        return _json(_fixture('off_ricerca_pane.json'));
+        return _json(_fixture('off_ricerca_pane_italia.json'));
       });
       await Future.wait([
         client.cercaPerNome('pane'),
@@ -181,13 +279,58 @@ void main() {
       final client = _client((r) async {
         chiamate++;
         if (chiamate == 1) return http.Response('x', 503);
-        return _json(_fixture('off_ricerca_pane.json'));
+        return _json(_fixture('off_ricerca_pane_italia.json'));
       });
       await expectLater(
         client.cercaPerNome('pane'),
         throwsA(isA<ServizioAlimentiNonDisponibile>()),
       );
       expect(await client.cercaPerNome('pane'), isNotEmpty);
+    });
+  });
+
+  group('Limite di richieste (Open Food Facts: ~10 ricerche al minuto)', () {
+    test('dopo 8 ricerche in un minuto non chiama più il servizio', () async {
+      var ora = DateTime(2026, 11, 25, 10);
+      var richieste = 0;
+      final client = OpenFoodFactsClient(
+        client: MockClient((r) async {
+          richieste++;
+          return _json(_fixture('off_ricerca_pane_italia.json'));
+        }),
+        adesso: () => ora,
+      );
+      for (var i = 0; i < 8; i++) {
+        await client.cercaPerNome('pane');
+        ora = ora.add(const Duration(seconds: 3));
+      }
+      expect(richieste, 8);
+      await expectLater(
+        client.cercaPerNome('pane'),
+        throwsA(isA<ServizioAlimentiNonDisponibile>()),
+      );
+      expect(richieste, 8, reason: 'nessuna richiesta oltre il limite');
+
+      // Passato il minuto si riparte.
+      ora = ora.add(const Duration(minutes: 1));
+      expect(await client.cercaPerNome('pane'), isNotEmpty);
+      expect(richieste, 9);
+    });
+
+    test('i codici a barre non consumano il limite delle ricerche', () async {
+      var ora = DateTime(2026, 11, 25, 10);
+      final client = OpenFoodFactsClient(
+        client: MockClient(
+          (r) async => r.url.path.contains('/api/v2/product/')
+              ? _json(_fixture('off_prodotto_3017620422003.json'))
+              : _json(_fixture('off_ricerca_pane_italia.json')),
+        ),
+        adesso: () => ora,
+      );
+      for (var i = 0; i < 8; i++) {
+        await client.cercaPerNome('pane');
+      }
+      expect(await client.perCodiceBarre('3017620422003'), isNotNull);
     });
   });
 

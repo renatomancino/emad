@@ -243,6 +243,21 @@ class _ProfiloPageState extends State<ProfiloPage> {
                 const SizedBox(height: 16),
                 if (_nutrizionista) ...[
                   RigaElenco(
+                    key: const Key('apri-alimenti'),
+                    leading: const IconaTonale(
+                      icona: Icons.restaurant_menu,
+                      dimensione: 40,
+                    ),
+                    titolo: 'Alimenti',
+                    sottotitolo: 'Cerca, crea e salva i tuoi preferiti',
+                    trailing: Icon(
+                      Icons.chevron_right,
+                      color: context.colori.testoSecondario,
+                    ),
+                    onTap: () => context.go(Rotte.nutAlimenti),
+                  ),
+                  const SizedBox(height: 16),
+                  RigaElenco(
                     key: const Key('apri-disponibilita'),
                     leading: const IconaTonale(
                       icona: Icons.schedule,

@@ -12,6 +12,8 @@ import '../../presentation/auth/registrazione_page.dart';
 import '../../presentation/comuni/elimina_account_page.dart';
 import '../../presentation/comuni/profilo_page.dart';
 import '../../presentation/comuni/stati_view.dart';
+import '../../presentation/nutrizionista/alimenti/alimento_personalizzato_page.dart';
+import '../../presentation/nutrizionista/alimenti/ricerca_alimento_page.dart';
 import '../../presentation/nutrizionista/calendario_page.dart';
 import '../../presentation/nutrizionista/disponibilita_page.dart';
 import '../../presentation/nutrizionista/invito_page.dart';
@@ -216,6 +218,23 @@ GoRouter creaRouter(Dipendenze dip) {
               GoRoute(
                 path: Rotte.nutProfilo,
                 builder: (context, stato) => ProfiloPage(dip: dip),
+                routes: [
+                  GoRoute(
+                    path: 'alimenti',
+                    builder: (context, stato) => RicercaAlimentoPage(dip: dip),
+                    routes: [
+                      GoRoute(
+                        path: 'nuovo',
+                        builder: (context, stato) => AlimentoPersonalizzatoPage(
+                          repository: dip.alimenti,
+                          nomeIniziale: stato.extra is String
+                              ? stato.extra! as String
+                              : '',
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ],
           ),

@@ -1,4 +1,8 @@
 # Campioni di risposte di Open Food Facts
 
-- `off_prodotto_<codice>.json`: risposte **vere** di `GET /api/v2/product/<codice>` (25/11/2026, campi `code, product_name, product_name_it, brands, nutriments`), usate per provare il parsing.
-- `off_ricerca_pane.json`: busta nella forma della ricerca per nome (`count`, `page`, `page_size`, `products`). Quando è stata scritta gli endpoint di ricerca di Open Food Facts rispondevano 503 dal container di sviluppo, quindi **la busta è costruita a mano** con i quattro prodotti veri sopra più quattro varianti sintetiche (codici `99999999999xx`): senza kcal, con solo kJ, senza nome, duplicato di un nome già presente. Sostituire con una risposta vera appena la ricerca torna raggiungibile.
+Risposte **vere** dell'API, salvate il 25/11/2026 con gli stessi parametri e campi che usa il client (`code, product_name, product_name_it, brands, nutriments`):
+
+- `off_ricerca_pane_italia.json`: `GET /cgi/search.pl?search_terms=pane&...&tagtype_0=countries&tag_contains_0=contains&tag_0=italy` (20 prodotti). Contiene casi reali utili ai test: un prodotto senza nome, uno con `energy-kcal_100g` assurdo (1289 kcal, ma 950 kJ coerenti), risultati poco pertinenti ("Wasa", "Piadelle") e nomi in francese.
+- `off_prodotto_<codice>.json`: `GET /api/v2/product/<codice>` per Nutella, spaghetti Barilla, biscotti e Nocciolata.
+
+Le varianti (senza kcal, solo kJ, duplicati) si costruiscono nei test modificando questi file.
