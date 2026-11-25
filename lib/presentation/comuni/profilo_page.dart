@@ -11,6 +11,7 @@ import '../../domain/regole/validazione.dart';
 import '../../domain/repository/auth_repository.dart';
 import '../../domain/repository/pazienti_repository.dart';
 import '../nutrizionista/abbonamento_view.dart';
+import 'componenti.dart';
 import 'controlli.dart';
 import 'segnaposto_page.dart';
 import 'stati_view.dart';
@@ -241,25 +242,31 @@ class _ProfiloPageState extends State<ProfiloPage> {
                 _formDati(testo),
                 const SizedBox(height: 16),
                 if (_nutrizionista) ...[
-                  Card(
-                    child: ListTile(
-                      key: const Key('apri-disponibilita'),
-                      leading: const Icon(Icons.schedule),
-                      title: const Text('Disponibilità e durata della visita'),
-                      subtitle: const Text('Giorni e orari di ricevimento'),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () => context.go(Rotte.nutDisponibilita),
+                  RigaElenco(
+                    key: const Key('apri-disponibilita'),
+                    leading: const IconaTonale(
+                      icona: Icons.schedule,
+                      dimensione: 40,
                     ),
+                    titolo: 'Disponibilità e durata della visita',
+                    maxRigheTitolo: null,
+                    sottotitolo: 'Giorni e orari di ricevimento',
+                    trailing: Icon(
+                      Icons.chevron_right,
+                      color: context.colori.testoSecondario,
+                    ),
+                    onTap: () => context.go(Rotte.nutDisponibilita),
                   ),
                   const SizedBox(height: 16),
                   AbbonamentoView(repository: widget.dip.abbonamento),
                 ] else ...[
-                  const Card(
-                    child: ListTile(
-                      leading: Icon(Icons.notifications_none),
-                      title: Text('Promemoria dei pasti'),
-                      subtitle: Text('In arrivo (UC_GN_2)'),
+                  const RigaElenco(
+                    leading: IconaTonale(
+                      icona: Icons.notifications_none,
+                      dimensione: 40,
                     ),
+                    titolo: 'Promemoria dei pasti',
+                    sottotitolo: 'In arrivo (UC_GN_2)',
                   ),
                   if (_auth.collegato) ...[
                     const SizedBox(height: 16),
@@ -280,7 +287,7 @@ class _ProfiloPageState extends State<ProfiloPage> {
                 TextButton.icon(
                   key: const Key('apri-elimina-account'),
                   style: TextButton.styleFrom(
-                    foregroundColor: ColoriCenato.errore,
+                    foregroundColor: context.colori.errore,
                   ),
                   onPressed: _inCorso
                       ? null
@@ -294,83 +301,77 @@ class _ProfiloPageState extends State<ProfiloPage> {
   }
 
   Widget _formDati(TextTheme testo) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                const CircleAvatar(
-                  backgroundColor: ColoriCenato.primarioChiaro,
-                  child: Icon(Icons.person, color: ColoriCenato.primario),
+    return SchedaSezione(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              const IconaTonale(icona: Icons.person),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  _auth.profilo?.ruolo.etichetta ?? '',
+                  style: testo.titleMedium,
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    _auth.profilo?.ruolo.etichetta ?? '',
-                    style: testo.titleMedium,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          CampoTesto(
+            controller: _nome,
+            etichetta: 'Nome e cognome',
+            errore: _erroreNome,
+            suggerimentiAutofill: const [AutofillHints.name],
+            onCambiato: (_) => setState(() => _erroreNome = null),
+          ),
+          if (_nutrizionista) ...[
+            const SizedBox(height: 12),
             CampoTesto(
-              controller: _nome,
-              etichetta: 'Nome e cognome',
-              errore: _erroreNome,
-              suggerimentiAutofill: const [AutofillHints.name],
-              onCambiato: (_) => setState(() => _erroreNome = null),
+              controller: _titolo,
+              etichetta: 'Titolo (es. biologa nutrizionista)',
             ),
-            if (_nutrizionista) ...[
-              const SizedBox(height: 12),
-              CampoTesto(
-                controller: _titolo,
-                etichetta: 'Titolo (es. biologa nutrizionista)',
+          ] else if (_auth.collegato) ...[
+            const SizedBox(height: 12),
+            CampoTesto(
+              controller: _altezza,
+              etichetta: 'Altezza (cm)',
+              errore: _erroreAltezza,
+              tastiera: const TextInputType.numberWithOptions(decimal: true),
+              onCambiato: (_) => setState(() => _erroreAltezza = null),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              key: const Key('scegli-data-nascita'),
+              onPressed: _scegliData,
+              icon: const Icon(Icons.cake_outlined),
+              label: Text(
+                _nascita == null
+                    ? 'Data di nascita'
+                    : 'Nato il ${_data(_nascita!)}',
               ),
-            ] else if (_auth.collegato) ...[
-              const SizedBox(height: 12),
-              CampoTesto(
-                controller: _altezza,
-                etichetta: 'Altezza (cm)',
-                errore: _erroreAltezza,
-                tastiera: const TextInputType.numberWithOptions(decimal: true),
-                onCambiato: (_) => setState(() => _erroreAltezza = null),
-              ),
-              const SizedBox(height: 12),
-              OutlinedButton.icon(
-                key: const Key('scegli-data-nascita'),
-                onPressed: _scegliData,
-                icon: const Icon(Icons.cake_outlined),
-                label: Text(
-                  _nascita == null
-                      ? 'Data di nascita'
-                      : 'Nato il ${_data(_nascita!)}',
-                ),
-              ),
-              const SizedBox(height: 12),
-              CampoTesto(
-                controller: _obiettivo,
-                etichetta: 'Il tuo obiettivo',
-                maxRighe: 3,
-              ),
-            ],
-            if (_erroreSalvataggio != null) ...[
-              const SizedBox(height: 12),
-              MessaggioErrore(
-                messaggio: _erroreSalvataggio!,
-                onRiprova: _erroreSalvataggioDiRete ? _salva : null,
-              ),
-            ],
-            const SizedBox(height: 16),
-            PulsantePrimario(
-              etichetta: 'Salva le modifiche',
-              onPressed: _salva,
-              inCorso: _salvando,
+            ),
+            const SizedBox(height: 12),
+            CampoTesto(
+              controller: _obiettivo,
+              etichetta: 'Il tuo obiettivo',
+              maxRighe: 3,
             ),
           ],
-        ),
+          if (_erroreSalvataggio != null) ...[
+            const SizedBox(height: 12),
+            MessaggioErrore(
+              messaggio: _erroreSalvataggio!,
+              onRiprova: _erroreSalvataggioDiRete ? _salva : null,
+            ),
+          ],
+          const SizedBox(height: 16),
+          PulsantePrimario(
+            etichetta: 'Salva le modifiche',
+            onPressed: _salva,
+            inCorso: _salvando,
+          ),
+        ],
       ),
     );
   }

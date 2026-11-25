@@ -1,6 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../core/tema/tema.dart';
+import 'componenti.dart';
+
 /// Mostrata quando `.env` manca o non è valido.
 class SchermataErroreConfigurazione extends StatelessWidget {
   const SchermataErroreConfigurazione({super.key, required this.messaggio});
@@ -18,10 +21,11 @@ class SchermataErroreConfigurazione extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
-                  Icons.settings_outlined,
-                  size: 64,
-                  color: Theme.of(context).colorScheme.error,
+                IconaTonale(
+                  icona: Icons.settings_outlined,
+                  colore: context.colori.errore,
+                  sfondo: context.colori.erroreTonale,
+                  dimensione: 88,
                 ),
                 const SizedBox(height: 16),
                 Text(

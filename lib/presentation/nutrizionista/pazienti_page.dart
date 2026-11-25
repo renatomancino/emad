@@ -8,6 +8,7 @@ import '../../domain/modelli/paziente.dart';
 import '../../domain/modelli/piano.dart';
 import '../../domain/repository/pazienti_repository.dart';
 import '../comuni/errore_limite_dialog.dart';
+import '../comuni/componenti.dart';
 import '../comuni/segnaposto_page.dart';
 import '../comuni/stati_view.dart';
 import 'sponsor_card.dart';
@@ -220,10 +221,10 @@ class _PazientiPageState extends State<PazientiPage> {
                   'nuovo serve un nuovo invito.',
                 ),
               const SizedBox(height: 8),
-              const Text(
+              Text(
                 'Dettaglio, piano e check-in arrivano nelle prossime schede. '
                 'Un paziente collegato non si elimina mai.',
-                style: TextStyle(color: ColoriCenato.testoSecondario),
+                style: TextStyle(color: context.colori.testoSecondario),
               ),
             ],
           ),
@@ -308,14 +309,13 @@ class _PazientiPageState extends State<PazientiPage> {
             const SponsorCard(),
             const SizedBox(height: 16),
           ],
-          SegmentedButton<FiltroPazienti>(
-            segments: [
+          SelettorePillole<FiltroPazienti>(
+            opzioni: [
               for (final f in FiltroPazienti.values)
-                ButtonSegment(value: f, label: Text(f.etichetta)),
+                OpzioneSelettore(f, f.etichetta),
             ],
-            selected: {_filtro},
-            showSelectedIcon: false,
-            onSelectionChanged: (s) => setState(() => _filtro = s.first),
+            selezionato: _filtro,
+            onCambiato: (f) => setState(() => _filtro = f),
           ),
           const SizedBox(height: 12),
           TextField(
@@ -355,15 +355,16 @@ class _PazientiPageState extends State<PazientiPage> {
             ),
             const SizedBox(height: 8),
             for (final i in inAttesa) ...[
-              Card(
-                child: ListTile(
-                  leading: const Icon(Icons.mail_outline),
-                  title: Text('${i.nome ?? 'Nuovo paziente'} · ${i.codice}'),
-                  subtitle: Text('Scade il ${_data(i.scadenza)}'),
-                  trailing: TextButton(
-                    onPressed: () => _revoca(i),
-                    child: const Text('Revoca'),
-                  ),
+              RigaElenco(
+                leading: const IconaTonale(
+                  icona: Icons.mail_outline,
+                  dimensione: 40,
+                ),
+                titolo: '${i.nome ?? 'Nuovo paziente'} · ${i.codice}',
+                sottotitolo: 'Scade il ${_data(i.scadenza)}',
+                trailing: TextButton(
+                  onPressed: () => _revoca(i),
+                  child: const Text('Revoca'),
                 ),
               ),
               const SizedBox(height: 8),
@@ -387,19 +388,22 @@ class _RigaPaziente extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final archiviato = paziente.stato == StatoPaziente.archiviato;
-    return Card(
-      child: ListTile(
-        onTap: onTap,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        leading: CircleAvatar(
-          backgroundColor: archiviato
-              ? const Color(0xFFE6E9E7)
-              : ColoriCenato.primarioChiaro,
-          child: Text(paziente.nome.isEmpty ? '?' : paziente.nome[0]),
+    final c = context.colori;
+    return RigaElenco(
+      onTap: onTap,
+      leading: CircleAvatar(
+        backgroundColor: archiviato ? c.bordo : c.primarioTonale,
+        foregroundColor: archiviato ? c.testoSecondario : c.primario,
+        child: Text(
+          paziente.nome.isEmpty ? '?' : paziente.nome[0],
+          style: const TextStyle(fontWeight: FontWeight.w700),
         ),
-        title: Text(paziente.nome),
-        subtitle: const Text('Semaforo e ultimo check-in: fase 3'),
-        trailing: EtichettaStato(testo: paziente.stato.etichetta),
+      ),
+      titolo: paziente.nome,
+      sottotitolo: 'Semaforo e ultimo check-in: fase 3',
+      trailing: EtichettaStato(
+        testo: paziente.stato.etichetta,
+        tono: archiviato ? TonoStato.neutro : TonoStato.positivo,
       ),
     );
   }

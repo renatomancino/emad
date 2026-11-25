@@ -7,6 +7,7 @@ import '../../core/router/rotte.dart';
 import '../../core/tema/tema.dart';
 import '../../domain/modelli/paziente.dart';
 import '../../domain/repository/pazienti_repository.dart';
+import '../comuni/componenti.dart';
 import '../comuni/controlli.dart';
 import '../comuni/errore_limite_dialog.dart';
 
@@ -107,15 +108,13 @@ class _InvitoPageState extends State<InvitoPage> {
             ),
             if (_errore != null) ...[
               const SizedBox(height: 12),
-              Text(
-                _errore!,
-                style: const TextStyle(color: ColoriCenato.errore),
-              ),
+              MessaggioErrore(messaggio: _errore!),
             ],
           ] else ...[
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
+            SchedaSezione(
+              padding: const EdgeInsets.all(20),
+              child: SizedBox(
+                width: double.infinity,
                 child: Column(
                   children: [
                     Text('Codice di invito', style: testo.labelLarge),
@@ -123,10 +122,11 @@ class _InvitoPageState extends State<InvitoPage> {
                     SelectableText(
                       invito.codice,
                       key: const Key('codice-invito'),
+                      textAlign: TextAlign.center,
                       style: testo.displaySmall?.copyWith(
                         fontWeight: FontWeight.w700,
                         letterSpacing: 4,
-                        color: ColoriCenato.primario,
+                        color: context.colori.primario,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -141,12 +141,7 @@ class _InvitoPageState extends State<InvitoPage> {
             const SizedBox(height: 16),
             Text('Messaggio da inviare', style: testo.titleSmall),
             const SizedBox(height: 8),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(_testoInvito(invito)),
-              ),
-            ),
+            SchedaSezione(child: Text(_testoInvito(invito))),
             const SizedBox(height: 16),
             PulsantePrimario(
               etichetta: 'Copia il messaggio',

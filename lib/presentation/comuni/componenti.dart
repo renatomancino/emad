@@ -1,0 +1,273 @@
+import 'package:material_ui/material_ui.dart';
+
+import '../../core/tema/tema.dart';
+
+/// Tono di un'etichetta di stato (es. "Attivo", "Archiviato").
+/// Il significato non è mai affidato al solo colore: c'è sempre il testo.
+enum TonoStato { positivo, attenzione, errore, neutro }
+
+/// Icona dentro un quadrato arrotondato dal fondo tenue, come nelle app
+/// salute. Decorativa: il significato sta nel testo accanto.
+class IconaTonale extends StatelessWidget {
+  const IconaTonale({
+    super.key,
+    required this.icona,
+    this.colore,
+    this.sfondo,
+    this.dimensione = 44,
+  });
+
+  final IconData icona;
+
+  /// Colore dell'icona (predefinito: verde principale).
+  final Color? colore;
+
+  /// Fondo del quadrato (predefinito: verde tenue).
+  final Color? sfondo;
+  final double dimensione;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colori;
+    return ExcludeSemantics(
+      child: SizedBox.square(
+        dimension: dimensione,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: sfondo ?? c.primarioTonale,
+            borderRadius: BorderRadius.circular(dimensione / 3.5),
+          ),
+          child: Center(
+            child: Icon(
+              icona,
+              size: dimensione * 0.5,
+              color: colore ?? c.primario,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Card bianca con titolo facoltativo e contenuto. Con [onTap] diventa
+/// toccabile (con effetto di pressione).
+class SchedaSezione extends StatelessWidget {
+  const SchedaSezione({
+    super.key,
+    this.titolo,
+    required this.child,
+    this.padding = const EdgeInsets.all(16),
+    this.onTap,
+  });
+
+  final String? titolo;
+  final Widget child;
+  final EdgeInsetsGeometry padding;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: padding,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (titolo != null) ...[
+                Text(titolo!, style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: 12),
+              ],
+              child,
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Riga di un elenco dentro una card: elemento iniziale, titolo, sottotitolo
+/// ed elemento finale. Alta almeno 64 dp; testi troncati con puntini, così
+/// nomi lunghi o testo ingrandito non causano overflow.
+class RigaElenco extends StatelessWidget {
+  const RigaElenco({
+    super.key,
+    required this.titolo,
+    this.sottotitolo,
+    this.leading,
+    this.trailing,
+    this.onTap,
+    this.maxRigheTitolo = 2,
+  });
+
+  /// Righe massime del titolo prima dei puntini; `null` per testi fissi che
+  /// non devono mai essere tagliati (es. voci di menu).
+  final int? maxRigheTitolo;
+
+  final String titolo;
+  final String? sottotitolo;
+  final Widget? leading;
+  final Widget? trailing;
+  final VoidCallback? onTap;
+
+  /// Oltre questa dimensione del testo di sistema l'elemento finale passa
+  /// sotto il titolo, così etichette e pulsanti non vengono tagliati.
+  static const double scalaTestoImpilata = 1.3;
+
+  @override
+  Widget build(BuildContext context) {
+    final testo = Theme.of(context).textTheme;
+    final c = context.colori;
+    final impilato =
+        trailing != null &&
+        MediaQuery.textScalerOf(context).scale(10) / 10 > scalaTestoImpilata;
+
+    final testi = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          titolo,
+          maxLines: maxRigheTitolo,
+          // Senza limite di righe i puntini ridurrebbero il titolo a una
+          // riga sola: il testo va a capo.
+          overflow: maxRigheTitolo == null
+              ? TextOverflow.visible
+              : TextOverflow.ellipsis,
+          style: testo.titleMedium,
+        ),
+        if (sottotitolo != null)
+          Text(
+            sottotitolo!,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: testo.bodyMedium?.copyWith(color: c.testoSecondario),
+          ),
+      ],
+    );
+    final riga = Row(
+      children: [
+        if (leading != null) ...[leading!, const SizedBox(width: 12)],
+        Expanded(child: testi),
+      ],
+    );
+
+    return Card(
+      child: InkWell(
+        onTap: onTap,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 64),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: impilato
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [riga, const SizedBox(height: 8), trailing!],
+                  )
+                : LayoutBuilder(
+                    builder: (context, vincoli) => Row(
+                      children: [
+                        if (leading != null) ...[
+                          leading!,
+                          const SizedBox(width: 12),
+                        ],
+                        Expanded(child: testi),
+                        if (trailing != null) ...[
+                          const SizedBox(width: 12),
+                          // L'elemento finale prende lo spazio che gli serve,
+                          // fino al 45% della riga; il resto va al titolo.
+                          ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxWidth: vincoli.maxWidth * 0.45,
+                            ),
+                            child: trailing!,
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Opzione di un [SelettorePillole].
+class OpzioneSelettore<T> {
+  const OpzioneSelettore(this.valore, this.etichetta);
+
+  final T valore;
+  final String etichetta;
+}
+
+/// Scelta singola tra poche opzioni, a pillole. Le pillole vanno a capo tra
+/// una e l'altra e non spezzano mai una parola, anche su telefoni stretti o
+/// con testo ingrandito (un `SegmentedButton` divide la larghezza in parti
+/// uguali e a 320 dp spezzava "Archiviati").
+class SelettorePillole<T> extends StatelessWidget {
+  const SelettorePillole({
+    super.key,
+    required this.opzioni,
+    required this.selezionato,
+    required this.onCambiato,
+  });
+
+  final List<OpzioneSelettore<T>> opzioni;
+  final T selezionato;
+  final ValueChanged<T> onCambiato;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final o in opzioni)
+          ChoiceChip(
+            label: Text(o.etichetta),
+            selected: o.valore == selezionato,
+            showCheckmark: false,
+            onSelected: (_) => onCambiato(o.valore),
+          ),
+      ],
+    );
+  }
+}
+
+/// "Sei stato invitato da NOME" (UC_GI_2, passo 3): usato dalla registrazione
+/// e dalla schermata di collegamento del paziente.
+class BannerInvito extends StatelessWidget {
+  const BannerInvito({super.key, required this.nomeNutrizionista});
+
+  final String nomeNutrizionista;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colori;
+    return Container(
+      key: const Key('banner-invito'),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: c.primarioTonale,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.verified_outlined, color: c.primario),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Sei stato invitato da $nomeNutrizionista.',
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

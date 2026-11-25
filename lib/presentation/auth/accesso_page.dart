@@ -7,6 +7,7 @@ import '../../core/router/rotte.dart';
 import '../../core/tema/tema.dart';
 import '../../domain/regole/validazione.dart';
 import '../../domain/repository/auth_repository.dart';
+import '../comuni/componenti.dart';
 import '../comuni/controlli.dart';
 
 /// Accesso con email e password (UC_GA_2, RF_GA_2). Dopo l'accesso il router
@@ -77,12 +78,10 @@ class _AccessoPageState extends State<AccessoPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Icon(
-                    Icons.restaurant,
-                    size: 56,
-                    color: ColoriCenato.primario,
+                  const Center(
+                    child: IconaTonale(icona: Icons.restaurant, dimensione: 72),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 16),
                   Text(
                     Testi.nomeApp,
                     textAlign: TextAlign.center,
@@ -94,7 +93,7 @@ class _AccessoPageState extends State<AccessoPage> {
                     'Il tuo percorso nutrizionale, pasto dopo pasto.',
                     textAlign: TextAlign.center,
                     style: testo.bodyMedium?.copyWith(
-                      color: ColoriCenato.testoSecondario,
+                      color: context.colori.testoSecondario,
                     ),
                   ),
                   const SizedBox(height: 32),

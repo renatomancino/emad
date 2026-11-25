@@ -1,3 +1,4 @@
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -5,6 +6,10 @@ import 'package:cenato/data/finto/dipendenze_finte.dart';
 import 'package:cenato/domain/modelli/profilo.dart';
 import 'package:cenato/domain/repository/pazienti_repository.dart';
 import 'package:cenato/main.dart';
+import 'package:cenato/presentation/comuni/componenti.dart';
+import 'package:cenato/presentation/comuni/elimina_account_page.dart';
+
+import 'font_reali.dart';
 
 /// Scheda "Profilo ed eliminazione account" (UC_GA_3, UC_GA_5).
 void main() {
@@ -249,5 +254,104 @@ void main() {
         expect(find.text('Questa azione è definitiva'), findsOneWidget);
       },
     );
+  });
+
+  group('Aspetto su telefono stretto e testo grande', () {
+    // 320 dp di larghezza, testo al 200%, font veri (RNF_U_3).
+    setUpAll(() async {
+      TestWidgetsFlutterBinding.ensureInitialized();
+      await caricaFontReali();
+    });
+
+    Future<DipendenzeFinte> avviaStretto(
+      WidgetTester tester,
+      Ruolo ruolo,
+    ) async {
+      tester.view.physicalSize = const Size(640, 2400);
+      tester.view.devicePixelRatio = 2;
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(tester.view.reset);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      final finte = DipendenzeFinte(ruolo: ruolo);
+      await tester.pumpWidget(CenatoApp(dip: finte.dip));
+      await tester.pumpAndSettle();
+      return finte;
+    }
+
+    testWidgets('nutrizionista: disponibilità in una riga elenco', (
+      tester,
+    ) async {
+      await avviaStretto(tester, Ruolo.nutrizionista);
+      await apriProfiloNutrizionista(tester);
+      expect(tester.takeException(), isNull);
+      expect(
+        tester.widget(find.byKey(const Key('apri-disponibilita'))),
+        isA<RigaElenco>(),
+      );
+    });
+
+    testWidgets(
+      'nutrizionista: il titolo della disponibilità non perde testo',
+      (tester) async {
+        await avviaStretto(tester, Ruolo.nutrizionista);
+        await apriProfiloNutrizionista(tester);
+        final titolo = find.text('Disponibilità e durata della visita');
+        expect(titolo, findsOneWidget);
+        expect(
+          tester.renderObject<RenderParagraph>(titolo).didExceedMaxLines,
+          isFalse,
+        );
+      },
+    );
+
+    testWidgets('paziente: profilo con righe e icone tonali', (tester) async {
+      await avviaStretto(tester, Ruolo.paziente);
+      await apriProfiloPaziente(tester);
+      expect(tester.takeException(), isNull);
+      expect(find.byType(RigaElenco), findsOneWidget);
+      expect(find.byType(IconaTonale), findsWidgets);
+      // Dal fondo della pagina si arriva ancora a "Elimina il mio account".
+      await tocca(tester, find.byKey(const Key('apri-elimina-account')));
+      expect(tester.takeException(), isNull);
+      // A testo grande il pulsante sta in fondo: si scorre fin lì.
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('conferma-elimina')),
+        300,
+        scrollable: find.descendant(
+          of: find.byType(EliminaAccountPage),
+          matching: find.byType(Scrollable),
+        ),
+      );
+      expect(tester.takeException(), isNull);
+      expect(find.byKey(const Key('conferma-elimina')), findsOneWidget);
+    });
+
+    testWidgets('collegamento: marchio tonale e nessun overflow', (
+      tester,
+    ) async {
+      final finte = await avviaStretto(tester, Ruolo.paziente);
+      finte.auth.scollega();
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(find.text('Collegati al tuo nutrizionista'), findsOneWidget);
+      expect(find.byType(IconaTonale), findsOneWidget);
+    });
+
+    testWidgets('sezioni del paziente: stato vuoto senza overflow', (
+      tester,
+    ) async {
+      await avviaStretto(tester, Ruolo.paziente);
+      for (final voce in ['Dieta', 'Andamento', 'Visite', 'Oggi']) {
+        await tocca(
+          tester,
+          find.descendant(
+            of: find.byType(NavigationBar),
+            matching: find.text(voce),
+          ),
+        );
+        expect(tester.takeException(), isNull, reason: voce);
+      }
+      expect(find.byType(IconaTonale), findsOneWidget);
+    });
   });
 }

@@ -4,6 +4,8 @@ import '../../core/tema/tema.dart';
 import '../../domain/modelli/piano.dart';
 import '../../domain/regole/limiti_piano.dart';
 import '../../domain/repository/pazienti_repository.dart';
+import '../comuni/componenti.dart';
+import '../comuni/segnaposto_page.dart';
 import '../comuni/stati_view.dart';
 
 /// AbbonamentoPage (UC_GAD_3, RF_GAD_4, RF_GAD_5): piano attuale, posti
@@ -58,7 +60,7 @@ class _AbbonamentoViewState extends State<AbbonamentoView> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFFFFF8E7),
+                color: context.colori.avvisoTonale,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Text(
@@ -139,7 +141,12 @@ class _AbbonamentoViewState extends State<AbbonamentoView> {
       );
     }
     final s = _stato;
-    if (s == null) return const SizedBox(height: 160, child: CaricamentoView());
+    if (s == null) {
+      return ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 160),
+        child: const CaricamentoView(),
+      );
+    }
 
     final testo = Theme.of(context).textTheme;
     final occupati = postiOccupati(
@@ -153,64 +160,58 @@ class _AbbonamentoViewState extends State<AbbonamentoView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Il tuo piano', style: testo.labelLarge),
-                Text(
-                  s.piano.etichetta +
-                      (s.periodo == null ? '' : ' · ${s.periodo!.name}'),
-                  key: const Key('piano-attuale'),
-                  style: testo.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+        SchedaSezione(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Il tuo piano', style: testo.labelLarge),
+              Text(
+                s.piano.etichetta +
+                    (s.periodo == null ? '' : ' · ${s.periodo!.name}'),
+                key: const Key('piano-attuale'),
+                style: testo.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
                 ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                limite == null
+                    ? 'Pazienti: ${s.pazientiAttivi} attivi · illimitati'
+                    : 'Posti occupati: $occupati su $limite',
+              ),
+              if (limite != null) ...[
                 const SizedBox(height: 8),
-                Text(
-                  limite == null
-                      ? 'Pazienti: ${s.pazientiAttivi} attivi · illimitati'
-                      : 'Posti occupati: $occupati su $limite',
+                LinearProgressIndicator(
+                  value: (occupati / limite).clamp(0, 1).toDouble(),
+                  backgroundColor: context.colori.primarioTonale,
+                  minHeight: 8,
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                if (limite != null) ...[
-                  const SizedBox(height: 8),
-                  LinearProgressIndicator(
-                    value: (occupati / limite).clamp(0, 1).toDouble(),
-                    minHeight: 8,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ],
-                if (s.invitiInAttesa > 0)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Text(
-                      'Comprende ${s.invitiInAttesa} invito/i in attesa.',
-                      style: testo.bodySmall?.copyWith(
-                        color: ColoriCenato.testoSecondario,
-                      ),
+              ],
+              if (s.invitiInAttesa > 0)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    'Comprende ${s.invitiInAttesa} invito/i in attesa.',
+                    style: testo.bodySmall?.copyWith(
+                      color: context.colori.testoSecondario,
                     ),
                   ),
-              ],
-            ),
+                ),
+            ],
           ),
         ),
         const SizedBox(height: 16),
-        SegmentedButton<PeriodoFatturazione>(
-          segments: const [
-            ButtonSegment(
-              value: PeriodoFatturazione.mensile,
-              label: Text('Mensile'),
-            ),
-            ButtonSegment(
-              value: PeriodoFatturazione.annuale,
-              label: Text('Annuale (2 mesi gratis)'),
+        SelettorePillole<PeriodoFatturazione>(
+          opzioni: const [
+            OpzioneSelettore(PeriodoFatturazione.mensile, 'Mensile'),
+            OpzioneSelettore(
+              PeriodoFatturazione.annuale,
+              'Annuale (2 mesi gratis)',
             ),
           ],
-          selected: {_periodo},
-          showSelectedIcon: false,
-          onSelectionChanged: (v) => setState(() => _periodo = v.first),
+          selezionato: _periodo,
+          onCambiato: (v) => setState(() => _periodo = v),
         ),
         const SizedBox(height: 12),
         for (final piano in PianoAbbonamento.values) ...[
@@ -228,7 +229,9 @@ class _AbbonamentoViewState extends State<AbbonamentoView> {
         Text(
           'Tutte le funzioni sono incluse in tutti i piani. Prezzi IVA esclusa. '
           'Nell\'MVP il pagamento è simulato: nessun addebito.',
-          style: testo.bodySmall?.copyWith(color: ColoriCenato.testoSecondario),
+          style: testo.bodySmall?.copyWith(
+            color: context.colori.testoSecondario,
+          ),
         ),
       ],
     );
@@ -256,40 +259,38 @@ class _SchedaPiano extends StatelessWidget {
     final prezzo = piano == PianoAbbonamento.free
         ? 'Gratis'
         : '${formattaEuro(piano.prezzoCent(periodo))} ${periodo.suffisso}';
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    piano.etichetta,
-                    style: testo.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+    final c = context.colori;
+    return SchedaSezione(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  piano.etichetta,
+                  style: testo.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
                   ),
-                  Text(piano.descrizioneLimite),
-                  Text(
-                    prezzo,
-                    style: testo.bodyLarge?.copyWith(
-                      color: ColoriCenato.primario,
-                    ),
-                  ),
-                ],
+                ),
               ),
+              if (attuale) const EtichettaStato(testo: 'Attuale'),
+            ],
+          ),
+          Text(
+            piano.descrizioneLimite,
+            style: testo.bodyMedium?.copyWith(color: c.testoSecondario),
+          ),
+          const SizedBox(height: 4),
+          Text(prezzo, style: testo.titleSmall?.copyWith(color: c.primario)),
+          if (!attuale) ...[
+            const SizedBox(height: 12),
+            FilledButton(
+              onPressed: inCorso ? null : onScegli,
+              child: Text('Passa a ${piano.etichetta}'),
             ),
-            if (attuale)
-              const Chip(label: Text('Attuale'))
-            else
-              FilledButton(
-                onPressed: inCorso ? null : onScegli,
-                child: Text('Passa a ${piano.etichetta}'),
-              ),
           ],
-        ),
+        ],
       ),
     );
   }

@@ -4,11 +4,11 @@ import 'package:material_ui/material_ui.dart';
 import '../../core/costanti/testi.dart';
 import '../../core/dipendenze.dart';
 import '../../core/router/rotte.dart';
-import '../../core/tema/tema.dart';
 import '../../domain/regole/validazione.dart';
 import '../../domain/repository/auth_repository.dart';
 import '../../domain/repository/collegamento_repository.dart';
 import '../../domain/repository/pazienti_repository.dart';
+import '../comuni/componenti.dart';
 import '../comuni/controlli.dart';
 import '../comuni/stati_view.dart';
 
@@ -144,8 +144,10 @@ class _CollegamentoPageState extends State<CollegamentoPage> {
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                const Icon(Icons.link, size: 56, color: ColoriCenato.primario),
-                const SizedBox(height: 12),
+                const Center(
+                  child: IconaTonale(icona: Icons.link, dimensione: 72),
+                ),
+                const SizedBox(height: 16),
                 Text(
                   'Collegati al tuo nutrizionista',
                   textAlign: TextAlign.center,
@@ -188,28 +190,8 @@ class _CollegamentoPageState extends State<CollegamentoPage> {
                     inCorso: _inCorso,
                   )
                 else ...[
-                  Container(
-                    key: const Key('banner-invito'),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: ColoriCenato.primarioChiaro,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.verified_outlined,
-                          color: ColoriCenato.primario,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Sei stato invitato da ${_anteprima!.nomeNutrizionista}.',
-                            style: const TextStyle(fontWeight: FontWeight.w600),
-                          ),
-                        ),
-                      ],
-                    ),
+                  BannerInvito(
+                    nomeNutrizionista: _anteprima!.nomeNutrizionista,
                   ),
                   const SizedBox(height: 12),
                   PulsantePrimario(

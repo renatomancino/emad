@@ -2,10 +2,18 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../core/costanti/testi.dart';
 import '../../core/tema/tema.dart';
+import 'componenti.dart';
 import 'stati_view.dart';
 
-/// Intestazione delle sezioni come nei mock-up: titolo e sottotitolo
-/// bianchi su verde (UI_GD_1, UI_GP_1, UI_GM_1).
+/// Intestazione delle sezioni: titolo grande e sottotitolo su sfondo chiaro,
+/// come nelle app salute (sostituisce la fascia verde dei mock-up del RAD).
+///
+/// L'altezza della barra è fissa, quindi il testo dell'intestazione segue la
+/// dimensione di sistema solo fino a 1,3×: oltre, titolo e sottotitolo restano
+/// comunque più grandi che al 100% (sono già testo grande) e non vanno mai in
+/// overflow. Titolo e sottotitolo stanno su una riga con puntini. I colori
+/// sono impostati qui: `titleTextStyle` del tema non viene ricolorato da
+/// `foregroundColor`.
 class IntestazioneSezione extends StatelessWidget
     implements PreferredSizeWidget {
   const IntestazioneSezione({
@@ -15,36 +23,52 @@ class IntestazioneSezione extends StatelessWidget
     this.azioni = const [],
   });
 
+  /// Dimensione massima del testo dell'intestazione rispetto a quella di sistema.
+  static const double scalaTestoMassima = 1.3;
+
   final String titolo;
   final String? sottotitolo;
   final List<Widget> azioni;
 
   @override
-  Size get preferredSize => const Size.fromHeight(76);
+  Size get preferredSize => const Size.fromHeight(96);
 
   @override
   Widget build(BuildContext context) {
     final testo = Theme.of(context).textTheme;
+    final c = context.colori;
     return AppBar(
-      toolbarHeight: 76,
+      toolbarHeight: 96,
+      backgroundColor: c.sfondo,
+      titleSpacing: 20,
       actions: azioni,
-      title: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            titolo,
-            style: testo.headlineSmall?.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          if (sottotitolo != null)
+      title: MediaQuery.withClampedTextScaling(
+        maxScaleFactor: scalaTestoMassima,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
             Text(
-              sottotitolo!,
-              style: testo.bodyMedium?.copyWith(color: Colors.white70),
+              titolo,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: testo.headlineMedium?.copyWith(
+                color: c.testo,
+                fontWeight: FontWeight.w800,
+              ),
             ),
-        ],
+            if (sottotitolo != null)
+              Semantics(
+                container: true,
+                child: Text(
+                  sottotitolo!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: testo.bodyMedium?.copyWith(color: c.testoSecondario),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -95,25 +119,40 @@ class SegnapostoPage extends StatelessWidget {
   }
 }
 
-/// Etichetta a pillola (es. "Seguito", "Da fare" nei mock-up).
+/// Etichetta a pillola (es. "Seguito", "Da fare" nei mock-up). Il testo c'è
+/// sempre: il colore del [tono] rinforza il significato, non lo sostituisce.
 class EtichettaStato extends StatelessWidget {
-  const EtichettaStato({super.key, required this.testo});
+  const EtichettaStato({
+    super.key,
+    required this.testo,
+    this.tono = TonoStato.positivo,
+  });
 
   final String testo;
+  final TonoStato tono;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      decoration: const ShapeDecoration(
-        color: ColoriCenato.primarioChiaro,
-        shape: StadiumBorder(),
-      ),
-      child: Text(
-        testo,
-        style: const TextStyle(
-          color: ColoriCenato.primario,
-          fontWeight: FontWeight.w700,
+    final c = context.colori;
+    final (sfondo, colore) = switch (tono) {
+      TonoStato.positivo => (c.primarioTonale, c.primario),
+      TonoStato.attenzione => (c.avvisoTonale, c.avviso),
+      TonoStato.errore => (c.erroreTonale, c.errore),
+      TonoStato.neutro => (c.bordo, c.testoSecondario),
+    };
+    return DecoratedBox(
+      decoration: ShapeDecoration(color: sfondo, shape: const StadiumBorder()),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        child: Text(
+          testo,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+            color: colore,
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+          ),
         ),
       ),
     );

@@ -1,3 +1,4 @@
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -7,6 +8,11 @@ import 'package:cenato/domain/modelli/paziente.dart';
 import 'package:cenato/domain/modelli/piano.dart';
 import 'package:cenato/domain/modelli/profilo.dart';
 import 'package:cenato/main.dart';
+import 'package:cenato/presentation/comuni/componenti.dart';
+import 'package:cenato/presentation/comuni/segnaposto_page.dart';
+import 'package:cenato/presentation/nutrizionista/sponsor_card.dart';
+
+import 'font_reali.dart';
 
 /// Schede della fase 1: Piani e abbonamento, Inviti, Elenco pazienti.
 /// Flussi delle schermate con dati finti (nessun database).
@@ -183,4 +189,190 @@ void main() {
       expect(dati.pazienti.last.stato, StatoPaziente.archiviato);
     },
   );
+
+  group('Aspetto su telefono stretto e testo grande', () {
+    // Font veri caricati una volta sola, prima dei test del gruppo.
+    setUpAll(() async {
+      TestWidgetsFlutterBinding.ensureInitialized();
+      await caricaFontReali();
+    });
+
+    // 320 dp di larghezza e testo di sistema al 200% (RNF_U_3).
+    Future<void> avviaStretto(
+      WidgetTester tester,
+      DatiFinti dati, {
+      double scala = 2,
+    }) async {
+      tester.view.physicalSize = const Size(640, 2400);
+      tester.view.devicePixelRatio = 2;
+      tester.platformDispatcher.textScaleFactorTestValue = scala;
+      addTearDown(tester.view.reset);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      await tester.pumpWidget(
+        CenatoApp(
+          dip: DipendenzeFinte(ruolo: Ruolo.nutrizionista, dati: dati).dip,
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> tocca(WidgetTester tester, Finder f) async {
+      await tester.ensureVisible(f);
+      await tester.pumpAndSettle();
+      await tester.tap(f);
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('elenco: righe in card e nome lunghissimo', (tester) async {
+      await avviaStretto(
+        tester,
+        DatiFinti(
+          pazienti: [
+            PazienteElenco(
+              id: 'a',
+              nome: ('Maria ' * 12).trim(),
+              stato: StatoPaziente.attivo,
+            ),
+            const PazienteElenco(
+              id: 'b',
+              nome: 'Marco',
+              stato: StatoPaziente.attivo,
+            ),
+          ],
+        ),
+      );
+      expect(tester.takeException(), isNull);
+      expect(find.byType(RigaElenco), findsNWidgets(2));
+      expect(find.text('Marco'), findsOneWidget);
+    });
+
+    testWidgets('piano Free: scheda sponsor senza overflow', (tester) async {
+      await avviaStretto(tester, DatiFinti(piano: PianoAbbonamento.free));
+      expect(tester.takeException(), isNull);
+      expect(find.byType(SponsorCard), findsOneWidget);
+    });
+
+    testWidgets('abbonamento: piano attuale come etichetta, senza overflow', (
+      tester,
+    ) async {
+      await avviaStretto(tester, DatiFinti(piano: PianoAbbonamento.free));
+      await tocca(
+        tester,
+        find.descendant(
+          of: find.byType(NavigationBar),
+          matching: find.text('Profilo'),
+        ),
+      );
+      expect(tester.takeException(), isNull);
+      // A testo grande le schede stanno sotto: si scorre fin lì.
+      await tester.scrollUntilVisible(
+        find.text('Annuale (2 mesi gratis)'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(tester.takeException(), isNull);
+      await tester.scrollUntilVisible(
+        find.widgetWithText(EtichettaStato, 'Attuale'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(tester.takeException(), isNull);
+      expect(find.widgetWithText(EtichettaStato, 'Attuale'), findsOneWidget);
+    });
+
+    // Con i font veri: il font di prova dei test non mostra le parole spezzate.
+    double altezzaTesto(WidgetTester tester, String testo) =>
+        tester.getSize(find.text(testo)).height;
+
+    testWidgets('filtri: ogni etichetta su una riga a 320 dp, testo normale', (
+      tester,
+    ) async {
+      await avviaStretto(tester, DatiFinti(), scala: 1);
+      expect(tester.takeException(), isNull);
+      expect(
+        altezzaTesto(tester, 'Archiviati'),
+        closeTo(altezzaTesto(tester, 'Tutti'), 0.5),
+      );
+      expect(
+        altezzaTesto(tester, 'Attivi'),
+        closeTo(altezzaTesto(tester, 'Tutti'), 0.5),
+      );
+    });
+
+    testWidgets('filtri: nessuna parola spezzata con testo al 200%', (
+      tester,
+    ) async {
+      await avviaStretto(tester, DatiFinti());
+      expect(tester.takeException(), isNull);
+      expect(
+        altezzaTesto(tester, 'Archiviati'),
+        closeTo(altezzaTesto(tester, 'Tutti'), 0.5),
+      );
+    });
+
+    testWidgets('filtro: tocco su Archiviati cambia l\'elenco', (tester) async {
+      await avviaStretto(tester, DatiFinti(), scala: 1);
+      await tocca(tester, find.text('Archiviati'));
+      expect(find.text('Luca'), findsOneWidget);
+      expect(find.text('Marco'), findsNothing);
+    });
+
+    testWidgets('abbonamento: periodo su una riga a 320 dp, testo normale', (
+      tester,
+    ) async {
+      await avviaStretto(
+        tester,
+        DatiFinti(piano: PianoAbbonamento.free),
+        scala: 1,
+      );
+      await tocca(
+        tester,
+        find.descendant(
+          of: find.byType(NavigationBar),
+          matching: find.text('Profilo'),
+        ),
+      );
+      await tester.scrollUntilVisible(
+        find.text('Annuale (2 mesi gratis)'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(tester.takeException(), isNull);
+      expect(
+        altezzaTesto(tester, 'Annuale (2 mesi gratis)'),
+        closeTo(altezzaTesto(tester, 'Mensile'), 0.5),
+      );
+    });
+
+    // L'etichetta di stato porta il significato: non va mai tagliata.
+    for (final scala in [1.0, 1.5, 2.0]) {
+      testWidgets('etichetta "Archiviato" intera con testo al ${scala}x', (
+        tester,
+      ) async {
+        await avviaStretto(tester, DatiFinti(), scala: scala);
+        await tocca(tester, find.text('Tutti'));
+        await tester.scrollUntilVisible(
+          find.text('Archiviato'),
+          300,
+          scrollable: find.byType(Scrollable).first,
+        );
+        expect(tester.takeException(), isNull);
+        expect(
+          tester
+              .renderObject<RenderParagraph>(find.text('Archiviato'))
+              .didExceedMaxLines,
+          isFalse,
+        );
+      });
+    }
+
+    testWidgets('invito: creazione e codice senza overflow', (tester) async {
+      await avviaStretto(tester, DatiFinti());
+      await tocca(tester, find.text('Invita'));
+      expect(tester.takeException(), isNull);
+      await tocca(tester, find.text('Crea invito'));
+      expect(tester.takeException(), isNull);
+      expect(find.byKey(const Key('codice-invito')), findsOneWidget);
+    });
+  });
 }

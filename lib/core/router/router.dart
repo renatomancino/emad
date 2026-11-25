@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../domain/modelli/profilo.dart';
 import '../../domain/repository/auth_repository.dart';
 import '../dipendenze.dart';
+import '../tema/transizioni.dart';
 import '../../presentation/auth/accesso_page.dart';
 import '../../presentation/auth/nuova_password_page.dart';
 import '../../presentation/auth/recupero_password_page.dart';
@@ -85,6 +86,13 @@ String? reindirizza(AuthRepository auth, String percorso) {
   return null;
 }
 
+/// Schede della barra in basso con dissolvenza al cambio di scheda.
+Widget _schedeConDissolvenza(
+  BuildContext context,
+  StatefulNavigationShell navigazione,
+  List<Widget> rami,
+) => RamiConDissolvenza(indice: navigazione.currentIndex, rami: rami);
+
 /// Router dell'app (go_router). Si aggiorna quando cambia la sessione.
 GoRouter creaRouter(Dipendenze dip) {
   final auth = dip.auth;
@@ -118,9 +126,10 @@ GoRouter creaRouter(Dipendenze dip) {
       ),
 
       // ------------------------------------------------ paziente
-      StatefulShellRoute.indexedStack(
+      StatefulShellRoute(
         builder: (context, stato, navigazione) =>
             PazienteShell(navigazione: navigazione),
+        navigatorContainerBuilder: _schedeConDissolvenza,
         branches: [
           StatefulShellBranch(
             routes: [
@@ -175,9 +184,10 @@ GoRouter creaRouter(Dipendenze dip) {
         path: Rotte.nutDisponibilita,
         builder: (context, stato) => DisponibilitaPage(dip: dip),
       ),
-      StatefulShellRoute.indexedStack(
+      StatefulShellRoute(
         builder: (context, stato, navigazione) =>
             NutrizionistaShell(navigazione: navigazione),
+        navigatorContainerBuilder: _schedeConDissolvenza,
         branches: [
           StatefulShellBranch(
             routes: [

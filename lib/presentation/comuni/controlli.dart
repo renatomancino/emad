@@ -165,13 +165,14 @@ class MessaggioErrore extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final errore = context.colori.errore;
     return Container(
       key: const Key('messaggio-errore'),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: ColoriCenato.errore.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: ColoriCenato.errore.withValues(alpha: 0.4)),
+        color: errore.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: errore.withValues(alpha: 0.4)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -179,7 +180,7 @@ class MessaggioErrore extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.error_outline, color: ColoriCenato.errore),
+              Icon(Icons.error_outline, color: errore),
               const SizedBox(width: 8),
               Expanded(child: Text(messaggio)),
             ],

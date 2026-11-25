@@ -8,6 +8,7 @@ import 'package:cenato/domain/regole/validazione.dart';
 import 'package:cenato/domain/repository/auth_repository.dart';
 import 'package:cenato/domain/repository/pazienti_repository.dart';
 import 'package:cenato/main.dart';
+import 'package:cenato/presentation/comuni/componenti.dart';
 
 /// Schede della fase 1: Registrazione con consenso, Accesso e recupero
 /// password, Accettazione invito. Flussi delle schermate con dati finti.
@@ -518,6 +519,47 @@ void main() {
     ) async {
       await avvia(tester, ruolo: Ruolo.nutrizionista);
       expect(find.text('Collegati al tuo nutrizionista'), findsNothing);
+    });
+  });
+
+  group('Aspetto su telefono stretto e testo grande', () {
+    // 320 dp di larghezza e testo di sistema al 200% (RNF_U_3).
+    Future<void> avviaStretto(WidgetTester tester) async {
+      tester.view.physicalSize = const Size(640, 1600);
+      tester.view.devicePixelRatio = 2;
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(tester.view.reset);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      await tester.pumpWidget(CenatoApp(dip: DipendenzeFinte().dip));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('accesso: marchio tonale e nessun overflow', (tester) async {
+      await avviaStretto(tester);
+      expect(tester.takeException(), isNull);
+      expect(find.byType(IconaTonale), findsOneWidget);
+      expect(find.text('Accedi'), findsWidgets);
+    });
+
+    testWidgets('registrazione: i tre passi senza overflow', (tester) async {
+      await avviaStretto(tester);
+      await vaiARegistrazione(tester);
+      expect(tester.takeException(), isNull);
+      expect(find.byType(IconaTonale), findsNWidgets(2));
+
+      await tocca(tester, find.byKey(const Key('ruolo-nutrizionista')));
+      await compilaModulo(tester);
+      expect(tester.takeException(), isNull);
+
+      await tocca(tester, find.text('Continua'));
+      expect(tester.takeException(), isNull);
+      expect(find.byKey(const Key('casella-consenso')), findsOneWidget);
+    });
+
+    testWidgets('recupero password: nessun overflow', (tester) async {
+      await avviaStretto(tester);
+      await tocca(tester, find.text('Password dimenticata?'));
+      expect(tester.takeException(), isNull);
     });
   });
 }
