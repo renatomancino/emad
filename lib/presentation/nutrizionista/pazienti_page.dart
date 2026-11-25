@@ -205,6 +205,15 @@ class _PazientiPageState extends State<PazientiPage> {
                   },
                 ),
                 const SizedBox(height: 8),
+                FilledButton.tonalIcon(
+                  icon: const Icon(Icons.restaurant_menu),
+                  label: const Text('Piano alimentare'),
+                  onPressed: () {
+                    Navigator.pop(context);
+                    router.push(Rotte.nutPiano(p.id), extra: p.nome);
+                  },
+                ),
+                const SizedBox(height: 8),
               ],
               if (p.stato == StatoPaziente.attivo)
                 OutlinedButton.icon(

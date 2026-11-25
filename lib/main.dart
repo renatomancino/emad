@@ -13,6 +13,7 @@ import 'data/supabase/alimenti_cache_supabase.dart';
 import 'data/supabase/collegamento_repository_supabase.dart';
 import 'data/supabase/obiettivi_repository_supabase.dart';
 import 'data/supabase/pazienti_repository_supabase.dart';
+import 'data/supabase/piani_repository_supabase.dart';
 import 'data/supabase/profilo_repository_supabase.dart';
 import 'data/supabase/supabase_auth_repository.dart';
 import 'data/supabase/supabase_service.dart';
@@ -68,6 +69,7 @@ Future<void> main() async {
           online: OpenFoodFactsClient(),
         ),
         obiettivi: ObiettiviRepositorySupabase(db),
+        piani: PianiRepositorySupabase(db),
       ),
     ),
   );

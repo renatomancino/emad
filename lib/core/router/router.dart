@@ -20,6 +20,7 @@ import '../../presentation/nutrizionista/invito_page.dart';
 import '../../presentation/nutrizionista/nutrizionista_shell.dart';
 import '../../presentation/nutrizionista/obiettivi_page.dart';
 import '../../presentation/nutrizionista/pazienti_page.dart';
+import '../../presentation/nutrizionista/piano/piano_editor_page.dart';
 import '../../presentation/paziente/andamento_page.dart';
 import '../../presentation/paziente/collegamento_page.dart';
 import '../../presentation/paziente/dieta_page.dart';
@@ -201,6 +202,16 @@ GoRouter creaRouter(Dipendenze dip) {
                   GoRoute(
                     path: 'invito',
                     builder: (context, stato) => InvitoPage(dip: dip),
+                  ),
+                  GoRoute(
+                    path: ':id/piano',
+                    builder: (context, stato) => PianoEditorPage(
+                      dip: dip,
+                      pazienteId: stato.pathParameters['id']!,
+                      nomePaziente: stato.extra is String
+                          ? stato.extra! as String
+                          : null,
+                    ),
                   ),
                   GoRoute(
                     path: ':id/obiettivi',
