@@ -1,3 +1,4 @@
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -342,6 +343,28 @@ void main() {
         closeTo(altezzaTesto(tester, 'Mensile'), 0.5),
       );
     });
+
+    // L'etichetta di stato porta il significato: non va mai tagliata.
+    for (final scala in [1.0, 1.5, 2.0]) {
+      testWidgets('etichetta "Archiviato" intera con testo al ${scala}x', (
+        tester,
+      ) async {
+        await avviaStretto(tester, DatiFinti(), scala: scala);
+        await tocca(tester, find.text('Tutti'));
+        await tester.scrollUntilVisible(
+          find.text('Archiviato'),
+          300,
+          scrollable: find.byType(Scrollable).first,
+        );
+        expect(tester.takeException(), isNull);
+        expect(
+          tester
+              .renderObject<RenderParagraph>(find.text('Archiviato'))
+              .didExceedMaxLines,
+          isFalse,
+        );
+      });
+    }
 
     testWidgets('invito: creazione e codice senza overflow', (tester) async {
       await avviaStretto(tester, DatiFinti());

@@ -114,10 +114,48 @@ class RigaElenco extends StatelessWidget {
   final Widget? trailing;
   final VoidCallback? onTap;
 
+  /// Oltre questa dimensione del testo di sistema l'elemento finale passa
+  /// sotto il titolo, così etichette e pulsanti non vengono tagliati.
+  static const double scalaTestoImpilata = 1.3;
+
   @override
   Widget build(BuildContext context) {
     final testo = Theme.of(context).textTheme;
     final c = context.colori;
+    final impilato =
+        trailing != null &&
+        MediaQuery.textScalerOf(context).scale(10) / 10 > scalaTestoImpilata;
+
+    final testi = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          titolo,
+          maxLines: maxRigheTitolo,
+          // Senza limite di righe i puntini ridurrebbero il titolo a una
+          // riga sola: il testo va a capo.
+          overflow: maxRigheTitolo == null
+              ? TextOverflow.visible
+              : TextOverflow.ellipsis,
+          style: testo.titleMedium,
+        ),
+        if (sottotitolo != null)
+          Text(
+            sottotitolo!,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: testo.bodyMedium?.copyWith(color: c.testoSecondario),
+          ),
+      ],
+    );
+    final riga = Row(
+      children: [
+        if (leading != null) ...[leading!, const SizedBox(width: 12)],
+        Expanded(child: testi),
+      ],
+    );
+
     return Card(
       child: InkWell(
         onTap: onTap,
@@ -125,51 +163,33 @@ class RigaElenco extends StatelessWidget {
           constraints: const BoxConstraints(minHeight: 64),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: LayoutBuilder(
-              builder: (context, vincoli) => Row(
-                children: [
-                  if (leading != null) ...[leading!, const SizedBox(width: 12)],
-                  Expanded(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
+            child: impilato
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [riga, const SizedBox(height: 8), trailing!],
+                  )
+                : LayoutBuilder(
+                    builder: (context, vincoli) => Row(
                       children: [
-                        Text(
-                          titolo,
-                          maxLines: maxRigheTitolo,
-                          // Senza limite di righe i puntini ridurrebbero il
-                          // titolo a una riga sola: il testo va a capo.
-                          overflow: maxRigheTitolo == null
-                              ? TextOverflow.visible
-                              : TextOverflow.ellipsis,
-                          style: testo.titleMedium,
-                        ),
-                        if (sottotitolo != null)
-                          Text(
-                            sottotitolo!,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: testo.bodyMedium?.copyWith(
-                              color: c.testoSecondario,
+                        if (leading != null) ...[
+                          leading!,
+                          const SizedBox(width: 12),
+                        ],
+                        Expanded(child: testi),
+                        if (trailing != null) ...[
+                          const SizedBox(width: 12),
+                          // L'elemento finale prende lo spazio che gli serve,
+                          // fino al 45% della riga; il resto va al titolo.
+                          ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxWidth: vincoli.maxWidth * 0.45,
                             ),
+                            child: trailing!,
                           ),
+                        ],
                       ],
                     ),
                   ),
-                  if (trailing != null) ...[
-                    const SizedBox(width: 12),
-                    // L'elemento finale prende lo spazio che gli serve, fino
-                    // al 45% della riga; il resto va al titolo.
-                    ConstrainedBox(
-                      constraints: BoxConstraints(
-                        maxWidth: vincoli.maxWidth * 0.45,
-                      ),
-                      child: trailing!,
-                    ),
-                  ],
-                ],
-              ),
-            ),
           ),
         ),
       ),
