@@ -80,6 +80,13 @@ class Macro {
     grassiG: grassiG + altro.grassiG,
   );
 
+  Macro operator -(Macro altro) => Macro(
+    kcal: kcal - altro.kcal,
+    proteineG: proteineG - altro.proteineG,
+    carboidratiG: carboidratiG - altro.carboidratiG,
+    grassiG: grassiG - altro.grassiG,
+  );
+
   @override
   bool operator ==(Object other) =>
       other is Macro &&
@@ -102,10 +109,47 @@ int _contatore = 0;
 /// ancora salvate). Non coincide con l'id del database.
 String nuovaChiave() => 'k${++_contatore}';
 
-/// Alternativa ammessa per una voce (RF_GP_6): alimento e quantità.
+/// Alternativa ammessa per una voce (RF_GP_6): alimento e quantità. Sono le
+/// uniche scelte che il paziente ha nel check-in "Alternativa".
 class AlternativaPiano {
-  const AlternativaPiano({required this.alimento, required this.quantitaG});
+  const AlternativaPiano({
+    this.id,
+    required this.alimento,
+    required this.quantitaG,
+  });
 
+  /// Id nel database; `null` per un'alternativa non ancora salvata.
+  final String? id;
+  final Alimento alimento;
+  final double quantitaG;
+
+  AlternativaPiano copyWith({double? quantitaG}) => AlternativaPiano(
+    id: id,
+    alimento: alimento,
+    quantitaG: quantitaG ?? this.quantitaG,
+  );
+}
+
+/// Alternativa di un pasto con la voce che sostituisce: quello che serve al
+/// check-in del paziente (`check_in.alternativa_id` è l'[id] di questa riga).
+class AlternativaAmmessa {
+  const AlternativaAmmessa({
+    required this.id,
+    required this.voceId,
+    required this.alimentoVoce,
+    required this.quantitaVoceG,
+    required this.alimento,
+    required this.quantitaG,
+  });
+
+  final String id;
+  final String voceId;
+
+  /// La voce originale del pasto.
+  final Alimento alimentoVoce;
+  final double quantitaVoceG;
+
+  /// L'alternativa ammessa.
   final Alimento alimento;
   final double quantitaG;
 }
@@ -150,6 +194,24 @@ class PastoPiano {
   /// "HH:mm" o `null`.
   final String? orario;
   final List<VocePiano> voci;
+
+  /// Copia con chiavi nuove (e senza id del database): una copia vera, non un
+  /// riferimento, per "copia del giorno" e per i modelli (RF_GP_9, RF_GP_13).
+  PastoPiano copia() => PastoPiano(
+    tipo: tipo,
+    orario: orario,
+    voci: [
+      for (final v in voci)
+        VocePiano(
+          alimento: v.alimento,
+          quantitaG: v.quantitaG,
+          alternative: [
+            for (final a in v.alternative)
+              AlternativaPiano(alimento: a.alimento, quantitaG: a.quantitaG),
+          ],
+        ),
+    ],
+  );
 
   PastoPiano copyWith({
     String? orario,
@@ -335,6 +397,88 @@ class PianoAlimentare {
       ],
     ),
   );
+
+  /// Imposta le alternative ammesse di una voce (RF_GP_6): una o più, oppure
+  /// nessuna.
+  PianoAlimentare impostaAlternative(
+    int giorno,
+    String chiavePasto,
+    String chiaveVoce,
+    List<AlternativaPiano> alternative,
+  ) => _sullaVoce(
+    giorno,
+    chiavePasto,
+    chiaveVoce,
+    (v) => v.copyWith(alternative: List.unmodifiable(alternative)),
+  );
+
+  PianoAlimentare _sullaVoce(
+    int giorno,
+    String chiavePasto,
+    String chiaveVoce,
+    VocePiano Function(VocePiano v) modifica,
+  ) => _sulPasto(
+    giorno,
+    chiavePasto,
+    (p) => p.copyWith(
+      voci: [
+        for (final v in p.voci)
+          if (v.chiave == chiaveVoce) modifica(v) else v,
+      ],
+    ),
+  );
+
+  /// Giorni di [destinazioni] che hanno già degli alimenti: copiarci sopra li
+  /// sostituisce, quindi prima si chiede conferma (RF_GP_13). Un giorno con
+  /// soli pasti vuoti non perde nulla e non conta.
+  List<int> giorniConAlimenti(Iterable<int> destinazioni) => [
+    for (final g in destinazioni)
+      if (giorno(g)?.pasti.any((p) => p.voci.isNotEmpty) ?? false) g,
+  ];
+
+  /// Copia profonda del giorno [da] (pasti, voci e alternative) su ogni
+  /// giorno di [a]: sostituisce i pasti dei giorni che già ci sono e crea
+  /// quelli che mancano (RF_GP_13).
+  PianoAlimentare copiaGiorno(int da, Iterable<int> a) {
+    final origine = giorno(da);
+    if (origine == null) return this;
+    final destinazioni = {
+      for (final g in a)
+        if (g != da) g,
+    };
+    final nuovi = <GiornoPiano>[
+      for (final g in giorni)
+        if (destinazioni.contains(g.giornoSettimana))
+          GiornoPiano(
+            giornoSettimana: g.giornoSettimana,
+            pasti: [for (final p in origine.pasti) p.copia()],
+          )
+        else
+          g,
+      for (final g in destinazioni)
+        if (giorno(g) == null)
+          GiornoPiano(
+            giornoSettimana: g,
+            pasti: [for (final p in origine.pasti) p.copia()],
+          ),
+    ]..sort((x, y) => x.giornoSettimana.compareTo(y.giornoSettimana));
+    return copyWith(giorni: nuovi);
+  }
+
+  /// Inserisce una copia di [pasto] nel giorno, al suo posto nella giornata
+  /// (da un pasto salvato, RF_GP_9).
+  PianoAlimentare inserisciPasto(int giorno, PastoPiano pasto) =>
+      _sulGiorno(giorno, (g) {
+        final copia = pasto.copia();
+        var posizione = g.pasti.length;
+        for (var i = 0; i < g.pasti.length; i++) {
+          if (g.pasti[i].tipo.index > copia.tipo.index) {
+            posizione = i;
+            break;
+          }
+        }
+        return g.copyWith(pasti: [...g.pasti]..insert(posizione, copia));
+      });
 
   /// Sposta una voce da [da] a [a] (indici come in `ReorderableListView`
   /// dopo la correzione: [a] è la posizione finale).

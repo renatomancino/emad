@@ -85,6 +85,7 @@ PianoAlimentare pianoDaRiga(Map<String, dynamic> r) {
                           in (v['alternative'] as List? ?? const [])
                               .cast<Map>())
                         AlternativaPiano(
+                          id: a['id'] as String?,
                           alimento: Alimento.daRiga(
                             Map<String, dynamic>.from(a['alimento'] as Map),
                           ),
@@ -165,6 +166,37 @@ class PianiRepositorySupabase extends PianiRepository {
         .single();
     return pianoDaRiga(riga);
   });
+
+  @override
+  Future<List<AlternativaAmmessa>> alternativePerPasto(String pastoId) =>
+      _chiama(() async {
+        final righe = await _db
+            .from('voci_pasto')
+            .select(
+              'id, quantita_g, ordine, alimento:alimenti(*), '
+              'alternative(id, quantita_g, alimento:alimenti(*))',
+            )
+            .eq('pasto_id', pastoId)
+            .order('ordine');
+        double numero(Object? v) =>
+            v is num ? v.toDouble() : double.parse('$v');
+        return [
+          for (final v in righe)
+            for (final a in (v['alternative'] as List? ?? const []).cast<Map>())
+              AlternativaAmmessa(
+                id: a['id'] as String,
+                voceId: v['id'] as String,
+                alimentoVoce: Alimento.daRiga(
+                  Map<String, dynamic>.from(v['alimento'] as Map),
+                ),
+                quantitaVoceG: numero(v['quantita_g']),
+                alimento: Alimento.daRiga(
+                  Map<String, dynamic>.from(a['alimento'] as Map),
+                ),
+                quantitaG: numero(a['quantita_g']),
+              ),
+        ];
+      });
 
   @override
   Future<PianoAlimentare> salva(String pazienteId, PianoAlimentare piano) =>

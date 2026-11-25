@@ -36,6 +36,26 @@ Macro macroVoce(Alimento alimento, double quantitaG) {
   );
 }
 
+/// Quanto cambia scegliendo l'alternativa al posto della voce originale
+/// (positivo = più kcal/macro dell'originale).
+Macro differenzaAlternativa(VocePiano voce, AlternativaPiano alternativa) =>
+    macroVoce(alternativa.alimento, alternativa.quantitaG) -
+    macroVoce(voce.alimento, voce.quantitaG);
+
+/// Nome di un modello (pasto salvato o piano modello): da 1 a 120 caratteri,
+/// come il vincolo della tabella `modelli_piano`.
+const int lunghezzaMassimaNomeModello = 120;
+
+String? validaNomeModello(String testo) {
+  final t = testo.trim();
+  if (t.isEmpty) return 'Dai un nome al modello.';
+  if (t.length > lunghezzaMassimaNomeModello) {
+    return 'Il nome può avere al massimo $lunghezzaMassimaNomeModello '
+        'caratteri.';
+  }
+  return null;
+}
+
 Macro macroPasto(PastoPiano pasto) =>
     [for (final v in pasto.voci) macroVoce(v.alimento, v.quantitaG)]
         .fold(Macro.zero, (a, b) => a + b);

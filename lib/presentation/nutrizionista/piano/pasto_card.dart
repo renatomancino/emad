@@ -13,12 +13,20 @@ String testoAlternative(VocePiano voce) => voce.alternative.isEmpty
 
 /// Riga di una voce: nome, quantità, kcal e, se ci sono, le alternative.
 class RigaVoce extends StatelessWidget {
-  const RigaVoce({super.key, required this.voce, this.azione});
+  const RigaVoce({
+    super.key,
+    required this.voce,
+    this.azione,
+    this.onAlternative,
+  });
 
   final VocePiano voce;
 
   /// Elementi a destra (cestino, maniglia di riordino): solo nell'editor.
   final Widget? azione;
+
+  /// Apre le alternative della voce: solo nell'editor.
+  final VoidCallback? onAlternative;
 
   @override
   Widget build(BuildContext context) {
@@ -52,6 +60,24 @@ class RigaVoce extends StatelessWidget {
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                     style: testo.bodySmall?.copyWith(color: c.testoSecondario),
+                  ),
+                if (onAlternative != null)
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      key: Key('alternative-${voce.chiave}'),
+                      onPressed: onAlternative,
+                      icon: const Icon(Icons.swap_horiz, size: 18),
+                      label: Text(
+                        voce.alternative.isEmpty
+                            ? 'Aggiungi alternativa'
+                            : 'Alternative (${voce.alternative.length})',
+                      ),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        minimumSize: const Size(0, 36),
+                      ),
+                    ),
                   ),
               ],
             ),

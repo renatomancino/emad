@@ -1057,7 +1057,7 @@ void main() {
         expect(latteY, lessThan(avenaY));
         await tester.drag(
           find.byIcon(Icons.drag_handle).first,
-          const Offset(0, 140),
+          const Offset(0, 300),
         );
         await tester.pumpAndSettle();
         expect(

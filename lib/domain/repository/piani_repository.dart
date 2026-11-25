@@ -18,6 +18,13 @@ abstract class PianiRepository extends ChangeNotifier {
   /// Una versione con tutta la sua struttura, per consultarla.
   Future<PianoAlimentare> versione(String pianoId);
 
+  /// Le alternative ammesse per i pasti [pastoId], ognuna con la voce che
+  /// sostituisce. Sono **le uniche scelte** che il paziente ha nel check-in
+  /// "Alternativa" (RF_GP_6, RF_GD_2, SD_1): `AlternativaAmmessa.id` è il
+  /// valore di `check_in.alternativa_id`. Il paziente le legge solo per le
+  /// versioni assegnate (RLS).
+  Future<List<AlternativaAmmessa>> alternativePerPasto(String pastoId);
+
   /// Salva [piano] come nuova versione e la assegna al paziente, tutto o
   /// niente. Lancia `ErroreOperazione` (piano non valido, paziente non attivo,
   /// rete): in quel caso nulla cambia.
