@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -78,6 +80,26 @@ void main() {
       final forma = temaCenato().cardTheme.shape! as RoundedRectangleBorder;
       expect(forma.borderRadius, BorderRadius.circular(20));
       expect(forma.side, BorderSide.none);
+    });
+
+    test('i colori vengono solo dal tema: niente costanti fisse in lib', () {
+      final file = Directory('lib')
+          .listSync(recursive: true)
+          .whereType<File>()
+          .where((f) => f.path.endsWith('.dart'));
+      expect(file, isNotEmpty);
+      for (final f in file) {
+        final testo = f.readAsStringSync();
+        expect(testo.contains('ColoriCenato'), isFalse, reason: f.path);
+        // Le pagine non scrivono colori a mano: passano da context.colori.
+        if (f.path.startsWith('lib/presentation/')) {
+          expect(
+            RegExp(r'Colors\.|Color\(0x').hasMatch(testo),
+            isFalse,
+            reason: f.path,
+          );
+        }
+      }
     });
 
     testWidgets('context.colori legge la palette dal tema attivo', (

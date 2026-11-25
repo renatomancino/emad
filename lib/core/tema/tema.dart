@@ -6,9 +6,7 @@ import 'package:material_ui/material_ui.dart';
 const String fontTitoli = 'PlusJakartaSans';
 const String fontTesto = 'Inter';
 
-/// Valori della palette chiara: unica fonte per [CenatoColori.chiaro] e per
-/// [ColoriCenato] (quest'ultimo resta finché tutte le pagine non leggono i
-/// colori dal tema).
+/// Valori della palette chiara, usati da [CenatoColori.chiaro].
 abstract final class _Palette {
   static const sfondo = Color(0xFFF3F6F4);
   static const superficie = Color(0xFFFFFFFF);
@@ -30,23 +28,6 @@ abstract final class _Palette {
   static const semaforoVerde = Color(0xFF2E7D4F);
   static const semaforoGiallo = Color(0xFFB7791F);
   static const semaforoRosso = Color(0xFFC0392B);
-}
-
-/// Colori di Cenato come costanti. Da usare solo dove non c'è un
-/// [BuildContext]; le pagine leggono `context.colori`. Verrà rimosso a
-/// migrazione finita.
-abstract final class ColoriCenato {
-  static const primario = _Palette.primario;
-  static const primarioChiaro = _Palette.primarioTonale;
-  static const sfondo = _Palette.sfondo;
-  static const superficie = _Palette.superficie;
-  static const bordo = _Palette.bordo;
-  static const testo = _Palette.testo;
-  static const testoSecondario = _Palette.testoSecondario;
-  static const errore = _Palette.errore;
-  static const semaforoVerde = _Palette.semaforoVerde;
-  static const semaforoGiallo = _Palette.semaforoGiallo;
-  static const semaforoRosso = _Palette.semaforoRosso;
 }
 
 /// Palette dell'app, registrata nel tema come estensione: così i colori
