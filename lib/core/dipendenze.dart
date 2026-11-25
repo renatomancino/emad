@@ -3,6 +3,7 @@ import '../domain/repository/auth_repository.dart';
 import '../domain/repository/collegamento_repository.dart';
 import '../domain/repository/obiettivi_repository.dart';
 import '../domain/repository/pazienti_repository.dart';
+import '../domain/repository/piani_repository.dart';
 import '../domain/repository/profilo_repository.dart';
 
 /// Repository usati dalle schermate. Creati in main.dart (Supabase o finti)
@@ -16,6 +17,7 @@ class Dipendenze {
     required this.profilo,
     required this.alimenti,
     required this.obiettivi,
+    required this.piani,
   });
 
   final AuthRepository auth;
@@ -25,4 +27,5 @@ class Dipendenze {
   final ProfiloRepository profilo;
   final AlimentiRepository alimenti;
   final ObiettiviRepository obiettivi;
+  final PianiRepository piani;
 }

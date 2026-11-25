@@ -27,6 +27,10 @@ abstract final class Rotte {
   /// Obiettivi nutrizionali di un paziente (UC_GP_6).
   static String nutObiettivi(String pazienteId) =>
       '/nutrizionista/pazienti/$pazienteId/obiettivi';
+
+  /// Editor del piano alimentare di un paziente (UC_GP_1).
+  static String nutPiano(String pazienteId) =>
+      '/nutrizionista/pazienti/$pazienteId/piano';
   static const nutCalendario = '/nutrizionista/calendario';
   static const nutDisponibilita = '/nutrizionista/disponibilita';
   static const nutProfilo = '/nutrizionista/profilo';
