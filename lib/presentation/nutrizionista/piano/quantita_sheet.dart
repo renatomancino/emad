@@ -15,16 +15,20 @@ Future<double?> chiediQuantita(
   required Alimento alimento,
   double? iniziale,
   String etichettaConferma = 'Aggiungi',
-}) => showModalBottomSheet<double>(
-  context: context,
-  isScrollControlled: true,
-  showDragHandle: true,
-  builder: (_) => _QuantitaSheet(
-    alimento: alimento,
-    iniziale: iniziale,
-    etichettaConferma: etichettaConferma,
-  ),
-);
+}) {
+  // Un avviso ancora visibile coprirebbe il pulsante del foglio.
+  ScaffoldMessenger.of(context).hideCurrentSnackBar();
+  return showModalBottomSheet<double>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (_) => _QuantitaSheet(
+      alimento: alimento,
+      iniziale: iniziale,
+      etichettaConferma: etichettaConferma,
+    ),
+  );
+}
 
 class _QuantitaSheet extends StatefulWidget {
   const _QuantitaSheet({

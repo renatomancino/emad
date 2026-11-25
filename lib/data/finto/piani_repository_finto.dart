@@ -67,6 +67,33 @@ class PianiRepositoryFinto extends PianiRepository {
   }
 
   @override
+  Future<List<AlternativaAmmessa>> alternativePerPasto(String pastoId) async {
+    _controlla();
+    for (final lista in _versioni.values) {
+      for (final piano in lista) {
+        for (final g in piano.giorni) {
+          for (final p in g.pasti) {
+            if (p.chiave != pastoId) continue;
+            return [
+              for (final v in p.voci)
+                for (final a in v.alternative)
+                  AlternativaAmmessa(
+                    id: a.id!,
+                    voceId: v.chiave,
+                    alimentoVoce: v.alimento,
+                    quantitaVoceG: v.quantitaG,
+                    alimento: a.alimento,
+                    quantitaG: a.quantitaG,
+                  ),
+            ];
+          }
+        }
+      }
+    }
+    return const [];
+  }
+
+  @override
   Future<PianoAlimentare> salva(
     String pazienteId,
     PianoAlimentare piano,
@@ -90,12 +117,42 @@ class PianiRepositoryFinto extends PianiRepository {
       }
     }
     salvataggi++;
+    // Come il database: ogni versione ha pasti, voci e alternative con id suoi.
+    var contatoreAlternative = 0;
+    final giorniSalvati = [
+      for (final g in piano.giorni)
+        GiornoPiano(
+          giornoSettimana: g.giornoSettimana,
+          pasti: [
+            for (final p in g.pasti)
+              PastoPiano(
+                tipo: p.tipo,
+                orario: p.orario,
+                voci: [
+                  for (final v in p.voci)
+                    VocePiano(
+                      alimento: v.alimento,
+                      quantitaG: v.quantitaG,
+                      alternative: [
+                        for (final a in v.alternative)
+                          AlternativaPiano(
+                            id: 'alt-${lista.length + 1}-${++contatoreAlternative}',
+                            alimento: a.alimento,
+                            quantitaG: a.quantitaG,
+                          ),
+                      ],
+                    ),
+                ],
+              ),
+          ],
+        ),
+    ];
     final nuova = PianoAlimentare(
       id: 'piano-$pazienteId-${lista.length + 1}',
       versione: lista.length + 1,
       stato: StatoPiano.corrente,
       dataInizio: piano.dataInizio,
-      giorni: piano.giorni,
+      giorni: giorniSalvati,
       creatoIl: DateTime.now(),
     );
     lista.add(nuova);

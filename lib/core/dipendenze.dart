@@ -1,6 +1,7 @@
 import '../domain/repository/alimenti_repository.dart';
 import '../domain/repository/auth_repository.dart';
 import '../domain/repository/collegamento_repository.dart';
+import '../domain/repository/modelli_repository.dart';
 import '../domain/repository/obiettivi_repository.dart';
 import '../domain/repository/pazienti_repository.dart';
 import '../domain/repository/piani_repository.dart';
@@ -18,6 +19,7 @@ class Dipendenze {
     required this.alimenti,
     required this.obiettivi,
     required this.piani,
+    required this.modelli,
   });
 
   final AuthRepository auth;
@@ -28,4 +30,5 @@ class Dipendenze {
   final AlimentiRepository alimenti;
   final ObiettiviRepository obiettivi;
   final PianiRepository piani;
+  final ModelliRepository modelli;
 }

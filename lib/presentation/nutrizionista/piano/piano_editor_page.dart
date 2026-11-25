@@ -5,6 +5,7 @@ import '../../../core/dipendenze.dart';
 import '../../../core/router/rotte.dart';
 import '../../../core/tema/tema.dart';
 import '../../../domain/modelli/alimento.dart';
+import '../../../domain/modelli/modello_piano.dart';
 import '../../../domain/modelli/obiettivi.dart';
 import '../../../domain/modelli/piano_alimentare.dart';
 import '../../../domain/regole/calcoli_piano.dart';
@@ -13,6 +14,9 @@ import '../../comuni/componenti.dart';
 import '../../comuni/controlli.dart';
 import '../../comuni/stati_view.dart';
 import 'aggiungi_alimento_page.dart';
+import 'alternative_page.dart';
+import 'copia_giorno_sheet.dart';
+import 'modelli_sheet.dart';
 import 'pasto_card.dart';
 import 'quantita_sheet.dart';
 import 'riepilogo_giorno.dart';
@@ -185,6 +189,131 @@ class _PianoEditorPageState extends State<PianoEditorPage> {
     );
     if (q == null || !mounted) return;
     _modifica(_piano!.aggiornaQuantita(_giorno, pasto.chiave, voce.chiave, q));
+  }
+
+  /// Alternative ammesse per una voce (RF_GP_6): si modificano in una pagina
+  /// a parte e ogni cambiamento arriva subito al piano.
+  Future<void> _modificaAlternative(PastoPiano pasto, VocePiano voce) {
+    final giorno = _giorno;
+    return Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => AlternativePage(
+          alimenti: widget.dip.alimenti,
+          voce: voce,
+          onCambia: (nuove) => _modifica(
+            _piano!.impostaAlternative(
+              giorno,
+              pasto.chiave,
+              voce.chiave,
+              nuove,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Copia il giorno attivo su altri giorni della settimana (RF_GP_13).
+  Future<void> _copiaGiorno() async {
+    final da = _giorno;
+    final scelti = await scegliGiorniDestinazione(
+      context,
+      piano: _piano!,
+      da: da,
+    );
+    if (scelti == null || !mounted) return;
+    final conPasti = _piano!.giorniConAlimenti(scelti);
+    if (conPasti.isNotEmpty) {
+      final nomi = conPasti.map(GiorniSettimana.nome).join(', ');
+      final ok = await _conferma(
+        titolo: 'Sostituire i pasti?',
+        messaggio:
+            '${conPasti.length == 1 ? '$nomi ha già dei pasti' : '$nomi hanno già dei pasti'}: '
+            'saranno sostituiti con quelli di '
+            '${GiorniSettimana.nome(da).toLowerCase()}.',
+        conferma: 'Sostituisci',
+      );
+      if (!ok || !mounted) return;
+    }
+    _modifica(_piano!.copiaGiorno(da, scelti));
+    _avvisa(
+      '${GiorniSettimana.nome(da)} copiato su ${scelti.length} '
+      '${scelti.length == 1 ? 'giorno' : 'giorni'}.',
+    );
+  }
+
+  Future<void> _salvaPastoComeModello(PastoPiano pasto) async {
+    if (pasto.voci.isEmpty) {
+      _avvisa('Aggiungi almeno un alimento prima di salvarlo come modello.');
+      return;
+    }
+    final nome = await chiediNomeModello(
+      context,
+      titolo: 'Salva ${pasto.tipo.etichetta.toLowerCase()} come modello',
+      suggerimento: pasto.tipo.etichetta,
+    );
+    if (nome == null || !mounted) return;
+    try {
+      await widget.dip.modelli.salvaPasto(nome, pasto);
+      if (mounted) _avvisa('«$nome» salvato tra i pasti salvati.');
+    } on ErroreOperazione catch (e) {
+      if (mounted) _avvisa(e.messaggio);
+    }
+  }
+
+  Future<void> _inserisciPastoSalvato() async {
+    final modello = await scegliModello(
+      context,
+      repository: widget.dip.modelli,
+      tipo: TipoModello.pasto,
+    );
+    if (modello == null || !mounted) return;
+    try {
+      _modifica(_piano!.inserisciPasto(_giorno, modello.pasto));
+    } on FormatException {
+      _avvisa('Questo pasto salvato non è leggibile.');
+    }
+  }
+
+  Future<void> _salvaPianoComeModello() async {
+    final problemi = problemiDelPiano(_piano!);
+    if (problemi.isNotEmpty) {
+      _avvisa(
+        'Completa il piano prima di salvarlo come modello. ${problemi.first.messaggio}',
+      );
+      return;
+    }
+    final nome = await chiediNomeModello(
+      context,
+      titolo: 'Salva il piano come modello',
+    );
+    if (nome == null || !mounted) return;
+    try {
+      await widget.dip.modelli.salvaPiano(nome, _piano!);
+      if (mounted) _avvisa('«$nome» salvato tra i piani modello.');
+    } on ErroreOperazione catch (e) {
+      if (mounted) _avvisa(e.messaggio);
+    }
+  }
+
+  /// Parte da un piano modello per un piano nuovo: è una copia (RF_GP_9).
+  Future<void> _partiDaModello() async {
+    final modello = await scegliModello(
+      context,
+      repository: widget.dip.modelli,
+      tipo: TipoModello.piano,
+    );
+    if (modello == null || !mounted) return;
+    try {
+      final piano = modello.piano(_oggi());
+      if (piano.giorni.isEmpty) {
+        _avvisa('Questo piano modello non ha giorni.');
+        return;
+      }
+      _creaDaImpostazione(piano);
+    } on FormatException {
+      _avvisa('Questo piano modello non è leggibile.');
+    }
   }
 
   Future<void> _aggiungiPasto() async {
@@ -488,6 +617,17 @@ class _PianoEditorPageState extends State<PianoEditorPage> {
                     : const Icon(Icons.check),
                 onPressed: _inCorso ? null : _salva,
               ),
+            if (inModifica)
+              PopupMenuButton<String>(
+                tooltip: 'Altre azioni',
+                onSelected: (_) => _salvaPianoComeModello(),
+                itemBuilder: (_) => const [
+                  PopupMenuItem(
+                    value: 'modello',
+                    child: Text('Salva piano come modello'),
+                  ),
+                ],
+              ),
           ],
         ),
         body: SafeArea(
@@ -501,6 +641,7 @@ class _PianoEditorPageState extends State<PianoEditorPage> {
                   obiettivi: _obiettivi,
                   onImposta: _vaiAgliObiettivi,
                   onCrea: _creaDaImpostazione,
+                  onDaModello: _partiDaModello,
                 )
               : _editor(context),
         ),
@@ -549,13 +690,23 @@ class _PianoEditorPageState extends State<PianoEditorPage> {
           ),
           PopupMenuButton<String>(
             tooltip: 'Giorni del piano',
-            onSelected: (v) =>
-                v == 'aggiungi' ? _aggiungiGiorno() : _rimuoviGiorno(),
+            onSelected: (v) => switch (v) {
+              'aggiungi' => _aggiungiGiorno(),
+              'copia' => _copiaGiorno(),
+              _ => _rimuoviGiorno(),
+            },
             itemBuilder: (_) => [
               if (piano.giorni.length < GiorniSettimana.tutti.length)
                 const PopupMenuItem(
                   value: 'aggiungi',
                   child: Text('Aggiungi un giorno'),
+                ),
+              if (giorno != null)
+                PopupMenuItem(
+                  value: 'copia',
+                  child: Text(
+                    'Copia ${GiorniSettimana.nome(_giorno).toLowerCase()} su…',
+                  ),
                 ),
               if (giorno != null)
                 PopupMenuItem(
@@ -597,13 +748,26 @@ class _PianoEditorPageState extends State<PianoEditorPage> {
                 _modifica(piano.spostaVoce(_giorno, p.chiave, da, a)),
             onOrario: () => _impostaOrario(p),
             onRimuovi: () => _rimuoviPasto(p),
+            onAlternative: (v) => _modificaAlternative(p, v),
+            onSalvaModello: () => _salvaPastoComeModello(p),
           ),
           const SizedBox(height: 8),
         ],
-        OutlinedButton.icon(
-          onPressed: _aggiungiPasto,
-          icon: const Icon(Icons.add),
-          label: const Text('Aggiungi pasto'),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            OutlinedButton.icon(
+              onPressed: _aggiungiPasto,
+              icon: const Icon(Icons.add),
+              label: const Text('Aggiungi pasto'),
+            ),
+            OutlinedButton.icon(
+              onPressed: _inserisciPastoSalvato,
+              icon: const Icon(Icons.bookmark_border),
+              label: const Text('Da pasto salvato'),
+            ),
+          ],
         ),
         const SizedBox(height: 24),
       ],
@@ -728,12 +892,14 @@ class _Impostazione extends StatefulWidget {
     required this.obiettivi,
     required this.onImposta,
     required this.onCrea,
+    required this.onDaModello,
   });
 
   final String? nomePaziente;
   final Obiettivi? obiettivi;
   final VoidCallback onImposta;
   final ValueChanged<PianoAlimentare> onCrea;
+  final VoidCallback onDaModello;
 
   @override
   State<_Impostazione> createState() => _ImpostazioneState();
@@ -841,6 +1007,12 @@ class _ImpostazioneState extends State<_Impostazione> {
               etichetta: 'Crea piano',
               onPressed: pronto ? _crea : null,
             ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: widget.onDaModello,
+              icon: const Icon(Icons.bookmark_border),
+              label: const Text('Parti da un piano modello'),
+            ),
           ],
         ),
       ),
@@ -860,6 +1032,8 @@ class _CardPasto extends StatelessWidget {
     required this.onRiordina,
     required this.onOrario,
     required this.onRimuovi,
+    required this.onAlternative,
+    required this.onSalvaModello,
   });
 
   final PastoPiano pasto;
@@ -870,6 +1044,8 @@ class _CardPasto extends StatelessWidget {
   final void Function(int da, int a) onRiordina;
   final VoidCallback onOrario;
   final VoidCallback onRimuovi;
+  final ValueChanged<VocePiano> onAlternative;
+  final VoidCallback onSalvaModello;
 
   @override
   Widget build(BuildContext context) {
@@ -891,9 +1067,17 @@ class _CardPasto extends StatelessWidget {
               pasto: pasto,
               menu: PopupMenuButton<String>(
                 tooltip: 'Opzioni del pasto',
-                onSelected: (v) => v == 'orario' ? onOrario() : onRimuovi(),
+                onSelected: (v) => switch (v) {
+                  'orario' => onOrario(),
+                  'modello' => onSalvaModello(),
+                  _ => onRimuovi(),
+                },
                 itemBuilder: (_) => const [
                   PopupMenuItem(value: 'orario', child: Text('Imposta orario')),
+                  PopupMenuItem(
+                    value: 'modello',
+                    child: Text('Salva come modello'),
+                  ),
                   PopupMenuItem(value: 'rimuovi', child: Text('Elimina pasto')),
                 ],
               ),
@@ -924,6 +1108,7 @@ class _CardPasto extends StatelessWidget {
                     onTap: () => onCambiaQuantita(v),
                     child: RigaVoce(
                       voce: v,
+                      onAlternative: () => onAlternative(v),
                       azione: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
