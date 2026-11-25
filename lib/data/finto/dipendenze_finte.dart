@@ -5,6 +5,7 @@ import 'alimenti_cache_in_memoria.dart';
 import 'fonte_alimenti_online_finta.dart';
 import 'auth_repository_finto.dart';
 import 'collegamento_repository_finto.dart';
+import 'obiettivi_repository_finto.dart';
 import 'pazienti_repository_finto.dart';
 import 'profilo_repository_finto.dart';
 
@@ -19,6 +20,7 @@ class DipendenzeFinte {
     abbonamento = AbbonamentoRepositoryFinto(this.dati);
     collegamento = CollegamentoRepositoryFinto(auth);
     profilo = ProfiloRepositoryFinto(auth);
+    obiettivi = ObiettiviRepositoryFinto();
     alimenti = AlimentiRepositoryImpl(
       cache: AlimentiCacheInMemoria(),
       online: alimentiOnline,
@@ -31,6 +33,7 @@ class DipendenzeFinte {
   late final AbbonamentoRepositoryFinto abbonamento;
   late final CollegamentoRepositoryFinto collegamento;
   late final ProfiloRepositoryFinto profilo;
+  late final ObiettiviRepositoryFinto obiettivi;
   late final AlimentiRepositoryImpl alimenti;
 
   /// Servizio online finto: i test ne leggono le chiamate e lo spengono.
@@ -43,5 +46,6 @@ class DipendenzeFinte {
     collegamento: collegamento,
     profilo: profilo,
     alimenti: alimenti,
+    obiettivi: obiettivi,
   );
 }

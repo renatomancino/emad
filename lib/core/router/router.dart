@@ -18,6 +18,7 @@ import '../../presentation/nutrizionista/calendario_page.dart';
 import '../../presentation/nutrizionista/disponibilita_page.dart';
 import '../../presentation/nutrizionista/invito_page.dart';
 import '../../presentation/nutrizionista/nutrizionista_shell.dart';
+import '../../presentation/nutrizionista/obiettivi_page.dart';
 import '../../presentation/nutrizionista/pazienti_page.dart';
 import '../../presentation/paziente/andamento_page.dart';
 import '../../presentation/paziente/collegamento_page.dart';
@@ -200,6 +201,16 @@ GoRouter creaRouter(Dipendenze dip) {
                   GoRoute(
                     path: 'invito',
                     builder: (context, stato) => InvitoPage(dip: dip),
+                  ),
+                  GoRoute(
+                    path: ':id/obiettivi',
+                    builder: (context, stato) => ObiettiviPage(
+                      repository: dip.obiettivi,
+                      pazienteId: stato.pathParameters['id']!,
+                      nomePaziente: stato.extra is String
+                          ? stato.extra! as String
+                          : null,
+                    ),
                   ),
                 ],
               ),

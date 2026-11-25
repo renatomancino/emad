@@ -1,6 +1,7 @@
 import '../domain/repository/alimenti_repository.dart';
 import '../domain/repository/auth_repository.dart';
 import '../domain/repository/collegamento_repository.dart';
+import '../domain/repository/obiettivi_repository.dart';
 import '../domain/repository/pazienti_repository.dart';
 import '../domain/repository/profilo_repository.dart';
 
@@ -14,6 +15,7 @@ class Dipendenze {
     required this.collegamento,
     required this.profilo,
     required this.alimenti,
+    required this.obiettivi,
   });
 
   final AuthRepository auth;
@@ -22,4 +24,5 @@ class Dipendenze {
   final CollegamentoRepository collegamento;
   final ProfiloRepository profilo;
   final AlimentiRepository alimenti;
+  final ObiettiviRepository obiettivi;
 }

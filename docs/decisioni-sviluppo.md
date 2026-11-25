@@ -114,3 +114,28 @@ Prove in `supabase/tests/alimenti_visibilita.sql`: 23 controlli, con le vecchie 
 
 I tempi sono quelli del solo client verso Open Food Facts (non comprendono l'attesa di 400 ms né le due letture su Supabase). Quando risponde, la ricerca per nome sta **sotto i 2 secondi** (RNF_P_3), ma da questo indirizzo il servizio rifiuta molte richieste con 503 (limite di ricerche o sovraccarico): è il caso "servizio non disponibile" e l'app ripiega sulla cache. **Da ripetere dal PC di Mario e da telefono**: `dart run tool/misura_ricerca.dart`.
 
+
+## Obiettivi nutrizionali (UC_GP_6, RF_GP_16, SC_GP_4)
+
+### D16 · Limiti dei valori e tolleranza (costanti in `lib/domain/regole/obiettivi.dart`)
+
+| Costante | Valore | Note |
+|---|---|---|
+| `kcalMin` / `kcalMax` | 800 / 6000 | Il database accetta già 500–6000 (`obiettivi_kcal_check`): l'app è più prudente, come chiede la scheda. |
+| `macroMaxG` | 1000 g | Soglia di plausibilità per ogni macronutriente; i macro devono essere > 0 e con un decimale (colonna `numeric(5,1)`). |
+| `tolleranzaKcal` | 10 % | Scarto tra le kcal indicate e quelle dei macro (4/4/9 kcal per grammo) oltre il quale compare un **avviso non bloccante**. **[DA CONFERMARE]** con i nutrizionisti. |
+
+Con i valori di SC_GP_4 (110 g P, 230 g C, 65 g G) i macro danno 1945 kcal contro 2000 indicate: scarto 2,75 %, nessun avviso.
+
+### D17 · Storico e "nessuna modifica"
+
+Ogni salvataggio inserisce una **nuova riga** in `obiettivi` (`data_inizio` = oggi); l'obiettivo corrente è l'ultima per `data_inizio` e, a parità, per `creato_il`. Se i valori inviati sono identici a quelli correnti non si crea una riga (si avvisa "Nessuna modifica"), per non gonfiare lo storico. Modificare gli obiettivi **non tocca i piani già assegnati**: cambia solo lo scostamento che l'editor calcolerà.
+
+### D18 · Dove si raggiungono
+
+Il dettaglio paziente non esiste ancora (scheda di Fase 3). Finché non c'è, "Obiettivi nutrizionali" è il primo pulsante nel pannello che si apre toccando un paziente **Attivo** (`/nutrizionista/pazienti/:id/obiettivi`). Per i pazienti archiviati il pulsante non c'è: gli obiettivi restano nello storico, ma non si modificano.
+
+### Per le schede successive
+
+- **Editor del piano (RM):** usare `ObiettiviRepository.corrente(pazienteId)` o `osserva(pazienteId)` (stream che riemette dopo ogni salvataggio). Se è `null`, invitare a impostarli senza bloccare l'editor.
+- **Sezione Dieta (MC):** la stessa interfaccia vale per il paziente, perché la policy `obiettivi_select` gli consente di leggere i propri; serve però l'`id` della sua riga in `pazienti` (non l'id utente). Se non è già esposto dal repository del collegamento, aggiungerlo lì.
