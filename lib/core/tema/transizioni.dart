@@ -8,6 +8,10 @@ class TransizionePagina extends PageTransitionsBuilder {
   final PageTransitionsBuilder delegato;
 
   @override
+  DelegatedTransitionBuilder? get delegatedTransition =>
+      delegato.delegatedTransition;
+
+  @override
   Widget buildTransitions<T>(
     PageRoute<T> route,
     BuildContext context,
@@ -31,8 +35,11 @@ const Duration durataDissolvenzaSchede = Duration(milliseconds: 220);
 
 /// Contenitore delle schede della barra in basso (una per ramo di
 /// navigazione): cambiando scheda la nuova compare in dissolvenza mentre la
-/// precedente svanisce. Come un `IndexedStack`, tutte le schede restano
-/// vive: testo digitato e posizione di scorrimento non si perdono.
+/// precedente svanisce. Ogni scheda ha la propria animazione, che riparte
+/// dal punto in cui si trova: cambi rapidi (A→B→A, A→B→C) non fanno scatti.
+/// Come un `IndexedStack`, tutte le schede restano vive: testo digitato e
+/// posizione di scorrimento non si perdono; quelle nascoste sono fuori
+/// schermo, senza tocchi, senza semantica e senza animazioni in corso.
 /// Con "riduci animazioni" il cambio è immediato.
 class RamiConDissolvenza extends StatefulWidget {
   const RamiConDissolvenza({
@@ -48,72 +55,60 @@ class RamiConDissolvenza extends StatefulWidget {
   State<RamiConDissolvenza> createState() => _RamiConDissolvenzaState();
 }
 
-class _RamiConDissolvenzaState extends State<RamiConDissolvenza>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _animazione = AnimationController(
-    vsync: this,
-    duration: durataDissolvenzaSchede,
-    value: 1,
-  );
-
-  /// Scheda che sta svanendo (solo durante la dissolvenza).
-  int? _anteriore;
-
-  @override
-  void initState() {
-    super.initState();
-    _animazione.addStatusListener((stato) {
-      if (stato == AnimationStatus.completed && _anteriore != null) {
-        setState(() => _anteriore = null);
-      }
-    });
-  }
+class _RamiConDissolvenzaState extends State<RamiConDissolvenza> {
+  /// Schede che stanno ancora svanendo: restano visibili fino a fine animazione.
+  final Set<int> _inUscita = {};
 
   @override
   void didUpdateWidget(RamiConDissolvenza vecchio) {
     super.didUpdateWidget(vecchio);
     if (vecchio.indice == widget.indice) return;
+    _inUscita.remove(widget.indice);
     if (MediaQuery.disableAnimationsOf(context)) {
-      _anteriore = null;
-      _animazione.value = 1;
+      _inUscita.clear();
     } else {
-      _anteriore = vecchio.indice;
-      _animazione.forward(from: 0);
+      _inUscita.add(vecchio.indice);
     }
   }
 
   @override
-  void dispose() {
-    _animazione.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
+    final durata = MediaQuery.disableAnimationsOf(context)
+        ? Duration.zero
+        : durataDissolvenzaSchede;
     return Stack(
       fit: StackFit.expand,
       children: [
         for (var i = 0; i < widget.rami.length; i++)
           // Stessa struttura per ogni scheda, così non viene ricreata.
-          Offstage(
-            offstage: i != widget.indice && i != _anteriore,
-            child: IgnorePointer(
-              ignoring: i != widget.indice,
-              child: ExcludeSemantics(
-                excluding: i != widget.indice,
-                child: TickerMode(
-                  enabled: i == widget.indice || i == _anteriore,
-                  child: FadeTransition(
-                    opacity: i == widget.indice
-                        ? _animazione
-                        : i == _anteriore
-                        ? ReverseAnimation(_animazione)
-                        : const AlwaysStoppedAnimation<double>(0),
-                    child: widget.rami[i],
+          Builder(
+            builder: (context) {
+              final attiva = i == widget.indice;
+              final visibile = attiva || _inUscita.contains(i);
+              return Offstage(
+                offstage: !visibile,
+                child: IgnorePointer(
+                  ignoring: !attiva,
+                  child: ExcludeSemantics(
+                    excluding: !attiva,
+                    child: TickerMode(
+                      enabled: visibile,
+                      child: AnimatedOpacity(
+                        key: ValueKey('dissolvenza-$i'),
+                        opacity: attiva ? 1 : 0,
+                        duration: durata,
+                        onEnd: () {
+                          if (i != widget.indice && _inUscita.remove(i)) {
+                            setState(() {});
+                          }
+                        },
+                        child: widget.rami[i],
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
+              );
+            },
           ),
       ],
     );

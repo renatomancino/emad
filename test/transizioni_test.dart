@@ -1,3 +1,4 @@
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -126,6 +127,56 @@ void main() {
       await tester.pumpAndSettle();
       final campo = tester.widget<TextField>(find.byType(TextField));
       expect(campo.controller!.text, 'sa');
+    });
+
+    // Opacità reale di una scheda in questo istante.
+    double opacita(WidgetTester tester, int scheda) => tester
+        .renderObject<RenderAnimatedOpacity>(
+          find.byKey(ValueKey('dissolvenza-$scheda'), skipOffstage: false),
+        )
+        .opacity
+        .value;
+
+    testWidgets('tornando alla scheda che svanisce non ci sono scatti', (
+      tester,
+    ) async {
+      await avvia(tester);
+      await tester.tap(voceBarra('Calendario'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      final pazientiPrima = opacita(tester, 0);
+      final calendarioPrima = opacita(tester, 1);
+      expect(pazientiPrima, inExclusiveRange(0.1, 0.9));
+
+      await tester.tap(voceBarra('Pazienti'));
+      await tester.pump();
+      expect(opacita(tester, 0), closeTo(pazientiPrima, 0.1));
+      expect(opacita(tester, 1), closeTo(calendarioPrima, 0.1));
+
+      await tester.pumpAndSettle();
+      expect(find.text(sottotitoloPazienti), findsOneWidget);
+      expect(find.text(sottotitoloCalendario), findsNothing);
+    });
+
+    testWidgets('tre schede in fila: nessuna scompare di colpo', (
+      tester,
+    ) async {
+      await avvia(tester);
+      await tester.tap(voceBarra('Calendario'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 80));
+      final primaA = opacita(tester, 0);
+      final primaB = opacita(tester, 1);
+
+      await tester.tap(voceBarra('Profilo'));
+      await tester.pump();
+      expect(opacita(tester, 0), closeTo(primaA, 0.1));
+      expect(opacita(tester, 1), closeTo(primaB, 0.1));
+
+      await tester.pumpAndSettle();
+      expect(find.text('Profilo e abbonamento'), findsOneWidget);
+      expect(find.text(sottotitoloPazienti), findsNothing);
+      expect(find.text(sottotitoloCalendario), findsNothing);
     });
 
     testWidgets('due cambi rapidi di scheda finiscono sulla scheda scelta', (
