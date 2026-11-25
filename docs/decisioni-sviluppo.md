@@ -150,11 +150,11 @@ Codici di errore nuovi: CN020 paziente non tuo o non attivo · CN021 struttura n
 
 ### D20 · Costanti dell'editor (`lib/domain/regole/calcoli_piano.dart`)
 
-| Costante | Valore | Note |
+| Costante | Valore | Decisione |
 |---|---|---|
-| `tolleranzaScostamento` | 10 % | Oltre questo scarto dall'obiettivo il totale è "fuori obiettivo" (giallo, mai rosso: non è un giudizio clinico). **[DA CONFERMARE]** |
-| `quantitaRapideG` | 50, 100, 150, 200 | RF_GP_15. |
-| `quantitaMaxG` | 5000 g | Il database accetta fino a 10000. **[DA CONFERMARE]** |
+| `tolleranzaScostamento` | 10 % | **Confermata come ipotesi di lavoro.** Il registro delle decisioni (domande aperte, punto 13) indica 10% e il RAD (UC_GP_6, flusso 3.3) usa lo stesso 10% [DA CONFERMARE] per la coerenza kcal/macro; il README del RAD chiede di tenere questi valori come costanti. Oltre lo scarto il totale è "fuori obiettivo" (giallo, mai rosso: non è un giudizio clinico). Resta da validare con un nutrizionista, ma si cambia in un solo punto. |
+| `quantitaRapideG` | 50, 100, 150, 200 | RF_GP_15 ("es. 50, 100, 150 g"): aggiunto 200 g, perché è la quantità di SC_GP_1 (200 ml di latte). |
+| `quantitaMaxG` | 5000 g | **Deroga annotata.** Il RAD chiede solo "quantità maggiore di zero" (UC_GP_2, flusso 4.1) e non fissa un massimo. Il tetto è una guardia tecnica contro i refusi (200 digitato come 20000), non un requisito: nessun alimento di un piano reale si avvicina a 5 kg per voce. Il database accetta fino a 10000 g (`salva_piano`). Da segnalare a chi cura i documenti, perché il RAD non lo cita. |
 
 Kcal e macro di una voce sono **arrotondati a un decimale** come `round(…, 1)` del database, così i totali mostrati prima di salvare coincidono con quelli salvati.
 
