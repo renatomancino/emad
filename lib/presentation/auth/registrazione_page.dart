@@ -10,6 +10,7 @@ import '../../domain/regole/validazione.dart';
 import '../../domain/repository/auth_repository.dart';
 import '../../domain/repository/collegamento_repository.dart';
 import '../../domain/repository/pazienti_repository.dart';
+import '../comuni/componenti.dart';
 import '../comuni/controlli.dart';
 
 /// Registrazione in tre schermate per entrambi i ruoli (UC_GA_1, RNF_U_4):
@@ -205,6 +206,7 @@ class _RegistrazionePageState extends State<RegistrazionePage> {
                   const SizedBox(height: 8),
                   LinearProgressIndicator(
                     value: (_passo + 1) / _passi,
+                    backgroundColor: context.colori.primarioTonale,
                     minHeight: 6,
                     borderRadius: BorderRadius.circular(6),
                   ),
@@ -356,27 +358,26 @@ class _RegistrazionePageState extends State<RegistrazionePage> {
         Text(Informativa.titolo, style: testo.headlineSmall),
         Text(
           'Versione ${Informativa.versione}',
-          style: testo.bodySmall?.copyWith(color: ColoriCenato.testoSecondario),
+          style: testo.bodySmall?.copyWith(
+            color: context.colori.testoSecondario,
+          ),
         ),
         const SizedBox(height: 12),
         if (_paziente && _anteprima != null) ...[
           _BannerInvito(anteprima: _anteprima!),
           const SizedBox(height: 12),
         ],
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                for (final (titolo, corpo) in Informativa.sezioni) ...[
-                  Text(titolo, style: testo.titleSmall),
-                  const SizedBox(height: 2),
-                  Text(corpo),
-                  const SizedBox(height: 12),
-                ],
+        SchedaSezione(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (final (titolo, corpo) in Informativa.sezioni) ...[
+                Text(titolo, style: testo.titleSmall),
+                const SizedBox(height: 2),
+                Text(corpo),
+                const SizedBox(height: 12),
               ],
-            ),
+            ],
           ),
         ),
         const SizedBox(height: 8),
@@ -392,12 +393,12 @@ class _RegistrazionePageState extends State<RegistrazionePage> {
           }),
         ),
         if (_consensoMancante)
-          const Padding(
-            padding: EdgeInsets.only(bottom: 8),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
             child: Text(
               Informativa.spiegazioneConsensoObbligatorio,
-              key: Key('consenso-obbligatorio'),
-              style: TextStyle(color: ColoriCenato.errore),
+              key: const Key('consenso-obbligatorio'),
+              style: TextStyle(color: context.colori.errore),
             ),
           ),
         if (_erroreGenerale != null) ...[
@@ -437,17 +438,21 @@ class _SchedaRuolo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colori;
     return Card(
       key: chiave,
-      color: selezionato ? ColoriCenato.primarioChiaro : null,
+      color: selezionato ? c.primarioTonale : null,
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              Icon(icona, size: 36, color: ColoriCenato.primario),
+              IconaTonale(
+                icona: icona,
+                dimensione: 52,
+                sfondo: selezionato ? c.superficie : null,
+              ),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(
@@ -462,7 +467,7 @@ class _SchedaRuolo extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right),
+              Icon(Icons.chevron_right, color: c.testoSecondario),
             ],
           ),
         ),
@@ -483,12 +488,12 @@ class _BannerInvito extends StatelessWidget {
       key: const Key('banner-invito'),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: ColoriCenato.primarioChiaro,
-        borderRadius: BorderRadius.circular(12),
+        color: context.colori.primarioTonale,
+        borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
         children: [
-          const Icon(Icons.verified_outlined, color: ColoriCenato.primario),
+          Icon(Icons.verified_outlined, color: context.colori.primario),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -524,10 +529,9 @@ class _ControllaEmail extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(
-                    Icons.mark_email_read_outlined,
-                    size: 64,
-                    color: ColoriCenato.primario,
+                  const IconaTonale(
+                    icona: Icons.mark_email_read_outlined,
+                    dimensione: 88,
                   ),
                   const SizedBox(height: 16),
                   Text(

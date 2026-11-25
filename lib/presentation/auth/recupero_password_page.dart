@@ -3,9 +3,9 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../core/dipendenze.dart';
 import '../../core/router/rotte.dart';
-import '../../core/tema/tema.dart';
 import '../../domain/regole/validazione.dart';
 import '../../domain/repository/auth_repository.dart';
+import '../comuni/componenti.dart';
 import '../comuni/controlli.dart';
 
 /// Recupero password (UC_GA_4, RF_GA_4): richiesta del link via email.
@@ -113,10 +113,8 @@ class _RecuperoPasswordPageState extends State<RecuperoPasswordPage> {
 
   List<Widget> _conferma(TextTheme testo) => [
     const SizedBox(height: 24),
-    const Icon(
-      Icons.mark_email_read_outlined,
-      size: 64,
-      color: ColoriCenato.primario,
+    const Center(
+      child: IconaTonale(icona: Icons.mark_email_read_outlined, dimensione: 88),
     ),
     const SizedBox(height: 16),
     Text(
