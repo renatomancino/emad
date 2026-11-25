@@ -63,10 +63,15 @@ void main() {
       }
     });
 
-    test('il bordo dei campi di testo ha almeno 3:1 sulla superficie', () {
-      const c = CenatoColori.chiaro;
-      expect(_contrasto(c.bordoCampo, c.superficie), greaterThanOrEqualTo(3));
-    });
+    test(
+      'il bordo dei campi ha almeno 3:1 sulla superficie e sullo sfondo',
+      () {
+        const c = CenatoColori.chiaro;
+        expect(_contrasto(c.bordoCampo, c.superficie), greaterThanOrEqualTo(3));
+        // I campi di ricerca stanno direttamente sullo sfondo della pagina.
+        expect(_contrasto(c.bordoCampo, c.sfondo), greaterThanOrEqualTo(3));
+      },
+    );
 
     test('le card non hanno bordo e hanno raggio 20', () {
       final forma = temaCenato().cardTheme.shape! as RoundedRectangleBorder;
@@ -74,13 +79,35 @@ void main() {
       expect(forma.side, BorderSide.none);
     });
 
-    testWidgets('context.colori restituisce la palette del tema', (
+    testWidgets('context.colori legge la palette dal tema attivo', (
+      tester,
+    ) async {
+      const personalizzato = Color(0xFF123456);
+      late CenatoColori letti;
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: temaCenato().copyWith(
+            extensions: [
+              CenatoColori.chiaro.copyWith(primario: personalizzato),
+            ],
+          ),
+          home: Builder(
+            builder: (context) {
+              letti = context.colori;
+              return const SizedBox();
+            },
+          ),
+        ),
+      );
+      expect(letti.primario, personalizzato);
+    });
+
+    testWidgets('context.colori senza estensione usa la palette chiara', (
       tester,
     ) async {
       late CenatoColori letti;
       await tester.pumpWidget(
         MaterialApp(
-          theme: temaCenato(),
           home: Builder(
             builder: (context) {
               letti = context.colori;

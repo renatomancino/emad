@@ -13,7 +13,7 @@ abstract final class _Palette {
   static const sfondo = Color(0xFFF3F6F4);
   static const superficie = Color(0xFFFFFFFF);
   static const bordo = Color(0xFFE1E8E3);
-  static const bordoCampo = Color(0xFF86968C);
+  static const bordoCampo = Color(0xFF7B8B81);
   static const testo = Color(0xFF16211C);
   static const testoSecondario = Color(0xFF55645C);
 
