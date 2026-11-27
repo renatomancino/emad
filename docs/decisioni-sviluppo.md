@@ -208,3 +208,37 @@ Uno snackbar ancora visibile può coprire il pulsante di un foglio che si apre s
 - **Sezione Dieta (MC):** `PianoSolaLettura` mostra già le alternative di ogni voce.
 - **`Dipendenze` ha il nuovo campo `modelli`** (richiesto): chi la costruisce a mano deve passarlo. `AlternativaPiano` ha ora un `id` facoltativo.
 
+
+## Scansione barcode (RF_GP_4, UC_GP_3, SC_GP_2, SD_2, RNF_IN_3)
+
+Scheda Trello: *Scansione barcode*. Funzione **non rinviata**: è nell'MVP e non c'è da avvisare chi cura i documenti. Schermate in `docs/scansione-barcode/` (`flusso-scansione.png` le riassume); checklist per il telefono in `docs/prova-scansione.md`.
+
+### D28 · Codice a barre unico per fonte e per nutrizionista (migrazione 009)
+
+`alimenti.codice_barre` era unico in tutta la tabella (001). Con la scansione, un prodotto che Open Food Facts non conosce si inserisce a mano come **personalizzato con il codice letto** (SC_GP_2, passo 5), e i personalizzati sono privati (D15): se Giulia ha già inserito il codice X, Elena non lo vede e, inserendolo anche lei, avrebbe ricevuto un errore di unicità che le rivela un dato altrui e la blocca. La 009 sostituisce il vincolo con due indici unici parziali: **unico tra gli alimenti di Open Food Facts** (la cache condivisa non si duplica) e **unico per nutrizionista tra i personalizzati**. Un personalizzato e uno di Open Food Facts possono avere lo stesso codice (il prodotto arriva su Open Food Facts dopo); la scansione preferisce **il personalizzato proprio**, perché il nutrizionista lo ha inserito apposta.
+
+Provata su PostgreSQL 16 locale con lo schema `auth` simulato: `supabase/tests/codice_barre.sql` dà **12 OK** (prima della 009 i casi 5, 9 e 10 falliscono, come atteso); `rls.sql` 50, `alimenti_nutrizionista.sql` 21, `alimenti_visibilita.sql` 23, `piano_salva.sql` 37, `modelli_alternative.sql` 32, `schema_vincoli.sql` 16, tutti OK. La 009 si riesegue senza errori. **Da applicare sul Supabase del gruppo** (SQL Editor) e da ripetere lì `codice_barre.sql`. Senza la 009 l'app funziona lo stesso, ma due nutrizionisti non possono inserire a mano lo stesso prodotto sconosciuto.
+
+### D29 · Prima la cache, poi Open Food Facts; si salva solo ciò che si aggiunge
+
+`AlimentiRepository.perCodiceBarre(codice)` guarda prima la cache (`alimenti`, per codice, con la RLS): se c'è, **Open Food Facts non si chiama**. Altrimenti chiama `/api/v2/product/{codice}`. Esiti: trovato, incompleto (D9: niente cache, si propone "Inserisci a mano" con nome e valori noti già scritti), non trovato (UC_GP_3, flusso 2.1) e servizio non disponibile (flusso 2.2: "Riprova" senza riscansionare, oppure inserimento a mano). Come per la ricerca per nome (D10), l'alimento va in cache con fonte e codice **solo quando si tocca "Aggiungi al pasto"**, poi passa alla quantità come prima (SD_2).
+
+Il codice letto si **normalizza** (`lib/domain/regole/codice_barre.dart`): EAN-13 ed EAN-8 restano come sono; UPC-A diventa EAN-13 con lo 0 davanti, come lo salva Open Food Facts; UPC-E si espande in UPC-A. Una lettura con la cifra di controllo sbagliata si scarta e si continua a inquadrare. Il codice salvato è quello normalizzato, anche se Open Food Facts risponde in un'altra forma: così la scansione successiva lo trova in cache.
+
+### D30 · Permesso della fotocamera senza pacchetti in più
+
+La scheda vieta pacchetti diversi da `mobile_scanner`, che chiede il permesso da solo quando avvia la fotocamera ma non dice prima se c'è già. Per spiegare il permesso **solo quando serve** (RNF_IN_3) e aprire le impostazioni se è stato negato (UC_GP_3, flusso 1.1), `MainActivity.kt` espone un piccolo canale `it.unisa.cenato/fotocamera` con `permessoConcesso` e `apriImpostazioni`. Flusso: permesso già dato → anteprima subito; altrimenti spiegazione → "Consenti fotocamera" → dialogo di Android; se negato, schermata con **"Cerca per nome"** (principale), "Apri impostazioni" e il percorso scritto. Tornando dalle impostazioni con il permesso dato, la fotocamera riparte da sola. Nel manifest: permesso `CAMERA` e `android.hardware.camera` **non obbligatoria** (l'app si installa anche senza fotocamera; resta la ricerca per nome).
+
+### D31 · Letture, fotocamera chiusa, torcia, demo
+
+- **Letture ripetute:** `DetectionSpeed.noDuplicates` di `mobile_scanner`, più un filtro (`FiltroLetture`, 3 s) sullo stesso codice. Alla prima lettura valida l'anteprima **esce dall'albero dei widget**, quindi la fotocamera si chiude subito (e si chiude uscendo dalla schermata). Si sospende anche quando l'app va in secondo piano.
+- **Feedback:** vibrazione breve (`HapticFeedback`, nessun pacchetto) e "Cerco il codice…".
+- **Torcia:** pulsante in alto a destra, solo se il telefono ce l'ha.
+- **Ingresso:** icona nel campo di "Aggiungi alimento" (editor del piano e alternative; dalle alternative il pulsante si chiama "Usa come alternativa"). "Cerca per nome" torna al campo con il cursore. Il profilo → "Alimenti" non ha la scansione: lì non c'è un pasto a cui aggiungere.
+- **Fotocamera simulata:** con `--dart-define=CENATO_RUOLO_FINTO=nutrizionista` (demo senza Supabase, browser, emulatore) l'anteprima è sostituita da pulsanti che "leggono" un codice del catalogo finto (trovato, incompleto, sconosciuto) o negano il permesso. **Nell'app vera non compare**: dipende da una costante di compilazione. I codici del catalogo finto ora hanno la cifra di controllo valida.
+- **Colori:** il fondo nero e il bianco della fotocamera sono nel tema (`fotocamera`, `sullaFotocamera`), come vuole `tema_test.dart`.
+
+### Per le altre schede
+
+- **Importazione CSV (MC):** per abbinare righe con un codice a barre si può usare `AlimentiRepository.perCodiceBarre` (prima la cache, poi Open Food Facts).
+- `AlimentiRepository.creaPersonalizzato` accetta ora `codiceBarre`; `AlimentiCache` ha `perCodiceBarre`; un doppione dello stesso codice tra i propri personalizzati dà `ErroreOperazione` con codice `codice_barre_esistente`.
