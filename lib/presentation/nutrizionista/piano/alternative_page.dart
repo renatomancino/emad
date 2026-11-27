@@ -47,7 +47,10 @@ class _AlternativePageState extends State<AlternativePage> {
   Future<void> _aggiungi() async {
     final alimento = await Navigator.of(context).push<Alimento>(
       MaterialPageRoute(
-        builder: (_) => AggiungiAlimentoPage(alimenti: widget.alimenti),
+        builder: (_) => AggiungiAlimentoPage(
+          alimenti: widget.alimenti,
+          etichettaConferma: 'Usa come alternativa',
+        ),
       ),
     );
     if (alimento == null || !mounted) return;

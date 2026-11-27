@@ -142,6 +142,11 @@ void main() {
           s.richieste.single.url.queryParameters['codice_barre'],
           'eq.1000000000001',
         );
+        // Con la 009 lo stesso codice può esserci tra i personalizzati.
+        expect(
+          s.richieste.single.url.queryParameters['fonte'],
+          'eq.open_food_facts',
+        );
       },
     );
 
@@ -206,6 +211,71 @@ void main() {
       final a = await _cache(s).salva(_off());
       expect(a.id, 'a5');
     });
+  });
+
+  group('Codice a barre (RF_GP_4)', () {
+    test('cerca per codice; senza righe restituisce null', () async {
+      final s = _Server((r) => _json([]));
+      expect(await _cache(s).perCodiceBarre('8000000000095'), isNull);
+      final get = s.richieste.single;
+      expect(get.method, 'GET');
+      expect(get.url.queryParameters['codice_barre'], 'eq.8000000000095');
+      expect(get.url.queryParameters.containsKey('fonte'), isFalse);
+    });
+
+    test(
+      'con quello di Open Food Facts e il proprio, vince il proprio',
+      () async {
+        final s = _Server(
+          (r) => _json([
+            _riga('off', 'Yogurt', codice: '8000000000095'),
+            _riga(
+              'mio',
+              'Il mio yogurt',
+              codice: '8000000000095',
+              fonte: 'personalizzato',
+            ),
+          ]),
+        );
+        final a = await _cache(s).perCodiceBarre('8000000000095');
+        expect(a!.id, 'mio');
+      },
+    );
+
+    test(
+      'personalizzato con un codice già proprio (23505): errore chiaro',
+      () async {
+        final s = _Server(
+          (r) => _json({
+            'code': '23505',
+            'message': 'duplicate key value violates unique constraint',
+          }, 409),
+        );
+        const mio = Alimento(
+          nome: 'Yogurt',
+          codiceBarre: '8000000000132',
+          kcal100g: 80,
+          proteine100g: 4,
+          carboidrati100g: 6,
+          grassi100g: 3.5,
+          fonte: FonteAlimento.personalizzato,
+        );
+        await expectLater(
+          _cache(s).salva(mio),
+          throwsA(
+            isA<ErroreOperazione>().having(
+              (e) => e.codice,
+              'codice',
+              'codice_barre_esistente',
+            ),
+          ),
+        );
+        final corpo =
+            jsonDecode(s.richieste.single.body) as Map<String, dynamic>;
+        expect(corpo['codice_barre'], '8000000000132');
+        expect(corpo['creato_da'], 'nut-1');
+      },
+    );
   });
 
   group('Recenti e preferiti', () {

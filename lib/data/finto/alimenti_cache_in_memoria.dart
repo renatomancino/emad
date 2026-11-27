@@ -34,8 +34,30 @@ class AlimentiCacheInMemoria implements AlimentiCache {
   }
 
   @override
+  Future<Alimento?> perCodiceBarre(String codice) async {
+    final conCodice = _alimenti.values.where((a) => a.codiceBarre == codice);
+    final personalizzato = conCodice.where(
+      (a) => a.fonte == FonteAlimento.personalizzato,
+    );
+    final trovato = personalizzato.isNotEmpty
+        ? personalizzato.first
+        : (conCodice.isEmpty ? null : conCodice.first);
+    return trovato == null ? null : _conFlag(trovato);
+  }
+
+  @override
   Future<Alimento> salva(Alimento alimento) async {
     assert(alimento.completo, 'La cache accetta solo alimenti completi');
+    // Come gli indici unici della migrazione 009 (un solo utente in memoria).
+    if (alimento.fonte == FonteAlimento.personalizzato &&
+        alimento.codiceBarre != null &&
+        _alimenti.values.any(
+          (a) =>
+              a.fonte == FonteAlimento.personalizzato &&
+              a.codiceBarre == alimento.codiceBarre,
+        )) {
+      throw erroreCodiceBarreEsistente;
+    }
     if (alimento.fonte == FonteAlimento.openFoodFacts) {
       final esistente = _alimenti.values.where((a) {
         if (a.fonte != FonteAlimento.openFoodFacts) return false;

@@ -99,6 +99,23 @@ class AlimentiCacheSupabase implements AlimentiCache {
       });
 
   @override
+  Future<Alimento?> perCodiceBarre(String codice) => _chiama(() async {
+    // La RLS (007) restituisce solo quello di Open Food Facts e, se c'è, il
+    // personalizzato proprio (o senza proprietario, dati di prova).
+    final righe = await _db
+        .from('alimenti')
+        .select()
+        .eq('codice_barre', codice)
+        .limit(5);
+    final alimenti = [for (final r in righe) Alimento.daRiga(r)];
+    if (alimenti.isEmpty) return null;
+    return alimenti.firstWhere(
+      (a) => a.fonte == FonteAlimento.personalizzato,
+      orElse: () => alimenti.first,
+    );
+  });
+
+  @override
   Future<Alimento> salva(Alimento alimento) => _chiama(() async {
     final daOnline = alimento.fonte == FonteAlimento.openFoodFacts;
     if (daOnline) {
@@ -118,10 +135,14 @@ class AlimentiCacheSupabase implements AlimentiCache {
           .single();
       return Alimento.daRiga(inserito);
     } on PostgrestException catch (e) {
-      // Un altro dispositivo lo ha salvato un attimo prima: si riusa.
-      if (e.code == '23505' && daOnline) {
-        final esistente = await _cercaEsistente(alimento);
-        if (esistente != null) return esistente;
+      if (e.code == '23505') {
+        // Un altro dispositivo lo ha salvato un attimo prima: si riusa.
+        if (daOnline) {
+          final esistente = await _cercaEsistente(alimento);
+          if (esistente != null) return esistente;
+        } else if (alimento.codiceBarre != null) {
+          throw erroreCodiceBarreEsistente;
+        }
       }
       rethrow;
     }
@@ -131,7 +152,11 @@ class AlimentiCacheSupabase implements AlimentiCache {
     final base = _db.from('alimenti').select();
     final Map<String, dynamic>? riga;
     if (a.codiceBarre != null) {
-      riga = await base.eq('codice_barre', a.codiceBarre!).maybeSingle();
+      // Con la 009 lo stesso codice può esserci anche tra i personalizzati.
+      riga = await base
+          .eq('fonte', FonteAlimento.openFoodFacts.valoreDb)
+          .eq('codice_barre', a.codiceBarre!)
+          .maybeSingle();
     } else {
       var q = base
           .eq('fonte', FonteAlimento.openFoodFacts.valoreDb)

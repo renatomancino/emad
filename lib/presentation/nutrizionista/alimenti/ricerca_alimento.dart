@@ -31,6 +31,7 @@ class RicercaAlimento extends StatefulWidget {
     required this.repository,
     required this.onScelto,
     this.onCreaPersonalizzato,
+    this.onScansiona,
     this.apriLink,
   });
 
@@ -43,6 +44,11 @@ class RicercaAlimento extends StatefulWidget {
   /// ritorno la ricerca si aggiorna.
   final Future<void> Function(String testo)? onCreaPersonalizzato;
 
+  /// Apre la scansione del codice a barre (RF_GP_4): icona nel campo di
+  /// ricerca. Restituisce vero se si torna a cercare per nome (il campo
+  /// prende il fuoco).
+  final Future<bool> Function()? onScansiona;
+
   /// Apre un indirizzo (di prova nei test); predefinito: browser del telefono.
   final Future<void> Function(Uri indirizzo)? apriLink;
 
@@ -54,6 +60,7 @@ class RicercaAlimento extends StatefulWidget {
 
 class _RicercaAlimentoState extends State<RicercaAlimento> {
   final _testo = TextEditingController();
+  final _fuoco = FocusNode();
   Timer? _attesa;
 
   /// Cresce a ogni ricerca: le risposte di ricerche superate si scartano.
@@ -78,6 +85,7 @@ class _RicercaAlimentoState extends State<RicercaAlimento> {
   void dispose() {
     _attesa?.cancel();
     _testo.dispose();
+    _fuoco.dispose();
     super.dispose();
   }
 
@@ -194,6 +202,13 @@ class _RicercaAlimentoState extends State<RicercaAlimento> {
     if (_pronto) _cerca();
   }
 
+  Future<void> _scansiona() async {
+    final cercaPerNome = await widget.onScansiona!();
+    if (!mounted) return;
+    _caricaElenchi();
+    if (cercaPerNome) _fuoco.requestFocus();
+  }
+
   Future<void> _stella(Alimento a) async {
     final nuovo = !a.preferito;
     try {
@@ -255,20 +270,33 @@ class _RicercaAlimentoState extends State<RicercaAlimento> {
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
           child: TextField(
             controller: _testo,
+            focusNode: _fuoco,
             onChanged: _alCambio,
             textInputAction: TextInputAction.search,
             decoration: InputDecoration(
               prefixIcon: const Icon(Icons.search),
               hintText: 'Cerca un alimento per nome',
-              suffixIcon: _testo.text.isEmpty
+              suffixIcon: _testo.text.isEmpty && widget.onScansiona == null
                   ? null
-                  : IconButton(
-                      tooltip: 'Cancella',
-                      icon: const Icon(Icons.close),
-                      onPressed: () {
-                        _testo.clear();
-                        _alCambio('');
-                      },
+                  : Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (_testo.text.isNotEmpty)
+                          IconButton(
+                            tooltip: 'Cancella',
+                            icon: const Icon(Icons.close),
+                            onPressed: () {
+                              _testo.clear();
+                              _alCambio('');
+                            },
+                          ),
+                        if (widget.onScansiona != null)
+                          IconButton(
+                            tooltip: 'Scansiona il codice a barre',
+                            icon: const Icon(Icons.qr_code_scanner),
+                            onPressed: _scansiona,
+                          ),
+                      ],
                     ),
             ),
           ),

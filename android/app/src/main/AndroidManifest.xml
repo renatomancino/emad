@@ -1,6 +1,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- Supabase e Open Food Facts: senza questo permesso l'APK di release non ha rete. -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Scansione del codice a barre (RF_GP_4, RNF_IN_3): il permesso si chiede
+         solo quando il nutrizionista apre la scansione. La fotocamera non è
+         obbligatoria: senza, l'app si installa e resta la ricerca per nome. -->
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-feature android:name="android.hardware.camera" android:required="false"/>
     <application
         android:label="cenato"
         android:name="${applicationName}"
