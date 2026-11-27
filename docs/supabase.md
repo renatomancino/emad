@@ -47,6 +47,7 @@ Le migrazioni sono in `supabase/migrations/` e vanno eseguite **in ordine**:
 | `004_account_inviti.sql` | Consenso GDPR obbligatorio e versione dell'informativa alla registrazione; verifica del codice di invito prima di registrarsi (`verifica_invito`, anche da non autenticati) con errori distinti CN010…CN013; `accetta_invito` rinnovata | Registrazione con ruolo e consenso, Accettazione invito |
 | `005_elimina_account.sql` | `elimina_account()`: cancella i dati clinici e l'account (art. 17 GDPR) | Profilo ed eliminazione account |
 | `008_salva_piano.sql` | `salva_piano()`: salva e assegna il piano come **nuova versione** in una sola transazione (tutto o niente), con controlli sulla struttura e kcal/macro ricalcolati dal database; errori CN020…CN024 | Editor del piano |
+| `009_codice_barre_personalizzati.sql` | Codice a barre unico tra gli alimenti di Open Food Facts e, tra i personalizzati, unico **per nutrizionista** (prima era unico in tutta la tabella); indice per la ricerca per codice | Scansione barcode |
 
 Due modi:
 

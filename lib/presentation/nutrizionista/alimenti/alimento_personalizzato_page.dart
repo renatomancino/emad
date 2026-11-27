@@ -5,18 +5,27 @@ import '../../../domain/regole/validazione_alimento.dart';
 import '../../../domain/repository/alimenti_repository.dart';
 import '../../../domain/repository/pazienti_repository.dart';
 import '../../comuni/controlli.dart';
+import 'ricerca_alimento.dart' show formattaValore;
 
 /// Modulo per un alimento personalizzato (RF_GP_5): nome e valori per 100 g,
 /// fonte "personalizzato". Al salvataggio restituisce l'[Alimento] creato.
+///
+/// Dalla scansione (RF_GP_4, SC_GP_2 passo 5) arriva con il [codiceBarre]
+/// letto e, se Open Food Facts conosceva il prodotto ma non tutti i valori,
+/// con [iniziale]: nome, marca e valori noti sono già scritti.
 class AlimentoPersonalizzatoPage extends StatefulWidget {
   const AlimentoPersonalizzatoPage({
     super.key,
     required this.repository,
     this.nomeIniziale = '',
+    this.codiceBarre,
+    this.iniziale,
   });
 
   final AlimentiRepository repository;
   final String nomeIniziale;
+  final String? codiceBarre;
+  final Alimento? iniziale;
 
   @override
   State<AlimentoPersonalizzatoPage> createState() =>
@@ -25,12 +34,17 @@ class AlimentoPersonalizzatoPage extends StatefulWidget {
 
 class _AlimentoPersonalizzatoPageState
     extends State<AlimentoPersonalizzatoPage> {
-  late final _nome = TextEditingController(text: widget.nomeIniziale);
-  final _marca = TextEditingController();
-  final _kcal = TextEditingController();
-  final _proteine = TextEditingController();
-  final _carboidrati = TextEditingController();
-  final _grassi = TextEditingController();
+  late final _nome = TextEditingController(
+    text: widget.iniziale?.nome ?? widget.nomeIniziale,
+  );
+  late final _marca = TextEditingController(text: widget.iniziale?.marca);
+  late final _kcal = _valore(widget.iniziale?.kcal100g);
+  late final _proteine = _valore(widget.iniziale?.proteine100g);
+  late final _carboidrati = _valore(widget.iniziale?.carboidrati100g);
+  late final _grassi = _valore(widget.iniziale?.grassi100g);
+
+  static TextEditingController _valore(double? v) =>
+      TextEditingController(text: v == null ? '' : formattaValore(v));
 
   final Map<String, String?> _errori = {};
   ErroreOperazione? _errore;
@@ -89,6 +103,7 @@ class _AlimentoPersonalizzatoPageState
         proteine100g: p!,
         carboidrati100g: c!,
         grassi100g: g!,
+        codiceBarre: widget.codiceBarre,
       );
       if (mounted) Navigator.of(context).pop<Alimento>(creato);
     } on ErroreOperazione catch (e) {
@@ -117,6 +132,21 @@ class _AlimentoPersonalizzatoPageState
                   'tra i tuoi e lo ritrovi nella ricerca.',
                   style: testo.bodyLarge,
                 ),
+                if (widget.codiceBarre != null) ...[
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      const Icon(Icons.qr_code_scanner, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Codice a barre: ${widget.codiceBarre}',
+                          style: testo.bodyMedium,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
                 const SizedBox(height: 16),
                 CampoTesto(
                   controller: _nome,

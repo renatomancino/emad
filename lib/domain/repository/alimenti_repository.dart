@@ -17,8 +17,47 @@ abstract interface class FonteAlimentiOnline {
   /// non è raggiungibile.
   Future<List<Alimento>> cercaPerNome(String testo, {int limite = 10});
 
-  /// Ricerca per codice a barre (riusata dalla scheda barcode).
+  /// Ricerca per codice a barre (RF_GP_4): `null` se il prodotto non c'è o
+  /// non ha un nome. Lancia [ServizioAlimentiNonDisponibile] se il servizio
+  /// non è raggiungibile.
   Future<Alimento?> perCodiceBarre(String codice);
+}
+
+/// Esito della ricerca di un codice a barre letto dalla fotocamera
+/// (UC_GP_3, SC_GP_2, SD_2).
+sealed class EsitoCodiceBarre {
+  const EsitoCodiceBarre(this.codice);
+
+  /// Codice normalizzato (vedi `CodiceBarre.normalizza`).
+  final String codice;
+}
+
+/// Prodotto con tutti i valori: si può aggiungere al pasto.
+final class CodiceTrovato extends EsitoCodiceBarre {
+  const CodiceTrovato(super.codice, this.alimento, {required this.daCache});
+
+  final Alimento alimento;
+
+  /// Era già nella cache: Open Food Facts non è stato chiamato.
+  final bool daCache;
+}
+
+/// Open Food Facts conosce il prodotto ma non ha tutti i valori: non va in
+/// cache come completo, si propone l'inserimento a mano (D9).
+final class CodiceIncompleto extends EsitoCodiceBarre {
+  const CodiceIncompleto(super.codice, this.alimento);
+
+  final Alimento alimento;
+}
+
+/// Né la cache né Open Food Facts conoscono il codice (UC_GP_3, flusso 2.1).
+final class CodiceNonTrovato extends EsitoCodiceBarre {
+  const CodiceNonTrovato(super.codice);
+}
+
+/// Open Food Facts non ha risposto (UC_GP_3, flusso 2.2).
+final class CodiceServizioNonDisponibile extends EsitoCodiceBarre {
+  const CodiceServizioNonDisponibile(super.codice);
 }
 
 /// Esito di una ricerca (UC_GP_3).
@@ -64,7 +103,14 @@ abstract interface class AlimentiRepository {
   /// Lancia `ErroreOperazione` per un alimento senza tutti i valori.
   Future<Alimento> scegli(Alimento alimento);
 
-  /// Crea un alimento personalizzato (fonte `personalizzato`, RF_GP_5).
+  /// Cerca un codice a barre già normalizzato: prima nella cache (se c'è,
+  /// Open Food Facts non si chiama), poi online. Non salva nulla: si salva con
+  /// [scegli] quando il nutrizionista aggiunge l'alimento (RF_GP_4).
+  /// Lancia `ErroreOperazione` se la cache non è raggiungibile.
+  Future<EsitoCodiceBarre> perCodiceBarre(String codice);
+
+  /// Crea un alimento personalizzato (fonte `personalizzato`, RF_GP_5), con
+  /// il codice a barre se viene da una scansione senza risultato.
   Future<Alimento> creaPersonalizzato({
     required String nome,
     required double kcal100g,
@@ -72,6 +118,7 @@ abstract interface class AlimentiRepository {
     required double carboidrati100g,
     required double grassi100g,
     String? marca,
+    String? codiceBarre,
   });
 
   /// Gli ultimi alimenti usati, dal più recente.

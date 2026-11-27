@@ -30,6 +30,8 @@ abstract final class _Palette {
   static const semaforoVerde = Color(0xFF2E7D4F);
   static const semaforoGiallo = Color(0xFFB7791F);
   static const semaforoRosso = Color(0xFFC0392B);
+  static const fotocamera = Color(0xFF000000);
+  static const sullaFotocamera = Color(0xFFFFFFFF);
 }
 
 /// Palette dell'app, registrata nel tema come estensione: così i colori
@@ -53,6 +55,8 @@ class CenatoColori extends ThemeExtension<CenatoColori> {
     required this.semaforoVerde,
     required this.semaforoGiallo,
     required this.semaforoRosso,
+    required this.fotocamera,
+    required this.sullaFotocamera,
   });
 
   /// Sfondo delle schermate.
@@ -87,6 +91,12 @@ class CenatoColori extends ThemeExtension<CenatoColori> {
   final Color semaforoGiallo;
   final Color semaforoRosso;
 
+  /// Fondo dell'anteprima della fotocamera (scansione del codice a barre).
+  final Color fotocamera;
+
+  /// Testo, icone e cornice sopra [fotocamera].
+  final Color sullaFotocamera;
+
   static const chiaro = CenatoColori(
     sfondo: _Palette.sfondo,
     superficie: _Palette.superficie,
@@ -104,6 +114,8 @@ class CenatoColori extends ThemeExtension<CenatoColori> {
     semaforoVerde: _Palette.semaforoVerde,
     semaforoGiallo: _Palette.semaforoGiallo,
     semaforoRosso: _Palette.semaforoRosso,
+    fotocamera: _Palette.fotocamera,
+    sullaFotocamera: _Palette.sullaFotocamera,
   );
 
   @override
@@ -124,6 +136,8 @@ class CenatoColori extends ThemeExtension<CenatoColori> {
     Color? semaforoVerde,
     Color? semaforoGiallo,
     Color? semaforoRosso,
+    Color? fotocamera,
+    Color? sullaFotocamera,
   }) {
     return CenatoColori(
       sfondo: sfondo ?? this.sfondo,
@@ -142,6 +156,8 @@ class CenatoColori extends ThemeExtension<CenatoColori> {
       semaforoVerde: semaforoVerde ?? this.semaforoVerde,
       semaforoGiallo: semaforoGiallo ?? this.semaforoGiallo,
       semaforoRosso: semaforoRosso ?? this.semaforoRosso,
+      fotocamera: fotocamera ?? this.fotocamera,
+      sullaFotocamera: sullaFotocamera ?? this.sullaFotocamera,
     );
   }
 
@@ -166,6 +182,8 @@ class CenatoColori extends ThemeExtension<CenatoColori> {
       semaforoVerde: l(semaforoVerde, other.semaforoVerde),
       semaforoGiallo: l(semaforoGiallo, other.semaforoGiallo),
       semaforoRosso: l(semaforoRosso, other.semaforoRosso),
+      fotocamera: l(fotocamera, other.fotocamera),
+      sullaFotocamera: l(sullaFotocamera, other.sullaFotocamera),
     );
   }
 }

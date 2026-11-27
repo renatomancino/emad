@@ -51,18 +51,19 @@ class Alimento {
       carboidrati100g != null &&
       grassi100g != null;
 
-  Alimento copyWith({String? id, bool? preferito}) => Alimento(
-    id: id ?? this.id,
-    nome: nome,
-    marca: marca,
-    codiceBarre: codiceBarre,
-    kcal100g: kcal100g,
-    proteine100g: proteine100g,
-    carboidrati100g: carboidrati100g,
-    grassi100g: grassi100g,
-    fonte: fonte,
-    preferito: preferito ?? this.preferito,
-  );
+  Alimento copyWith({String? id, bool? preferito, String? codiceBarre}) =>
+      Alimento(
+        id: id ?? this.id,
+        nome: nome,
+        marca: marca,
+        codiceBarre: codiceBarre ?? this.codiceBarre,
+        kcal100g: kcal100g,
+        proteine100g: proteine100g,
+        carboidrati100g: carboidrati100g,
+        grassi100g: grassi100g,
+        fonte: fonte,
+        preferito: preferito ?? this.preferito,
+      );
 
   /// Riga della tabella `alimenti`. I numeri arrivano come `num` o come testo.
   factory Alimento.daRiga(Map<String, dynamic> riga, {bool preferito = false}) {

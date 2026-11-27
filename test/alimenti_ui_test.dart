@@ -45,6 +45,10 @@ class _ConErrori implements AlimentiRepository {
   Future<Alimento> scegli(Alimento a) => _vero.scegli(a);
 
   @override
+  Future<EsitoCodiceBarre> perCodiceBarre(String codice) =>
+      _vero.perCodiceBarre(codice);
+
+  @override
   Future<Alimento> creaPersonalizzato({
     required String nome,
     required double kcal100g,
@@ -52,6 +56,7 @@ class _ConErrori implements AlimentiRepository {
     required double carboidrati100g,
     required double grassi100g,
     String? marca,
+    String? codiceBarre,
   }) => _vero.creaPersonalizzato(
     nome: nome,
     kcal100g: kcal100g,
@@ -59,6 +64,7 @@ class _ConErrori implements AlimentiRepository {
     carboidrati100g: carboidrati100g,
     grassi100g: grassi100g,
     marca: marca,
+    codiceBarre: codiceBarre,
   );
 
   @override

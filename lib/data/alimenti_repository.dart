@@ -1,4 +1,5 @@
 import '../domain/modelli/alimento.dart';
+import '../domain/regole/codice_barre.dart';
 import '../domain/regole/validazione_alimento.dart';
 import '../domain/repository/alimenti_repository.dart';
 import '../domain/repository/pazienti_repository.dart';
@@ -86,6 +87,25 @@ class AlimentiRepositoryImpl implements AlimentiRepository {
     return salvato;
   }
 
+  @override
+  Future<EsitoCodiceBarre> perCodiceBarre(String codice) async {
+    final inCache = await cache.perCodiceBarre(codice);
+    if (inCache != null) return CodiceTrovato(codice, inCache, daCache: true);
+    try {
+      final online = await this.online.perCodiceBarre(codice);
+      if (online == null) return CodiceNonTrovato(codice);
+      // Open Food Facts può restituire il codice in un'altra forma (senza lo
+      // 0 davanti): si tiene quello letto, così la prossima scansione dello
+      // stesso prodotto lo trova in cache.
+      final alimento = online.copyWith(codiceBarre: codice);
+      return alimento.completo
+          ? CodiceTrovato(codice, alimento, daCache: false)
+          : CodiceIncompleto(codice, alimento);
+    } on ServizioAlimentiNonDisponibile {
+      return CodiceServizioNonDisponibile(codice);
+    }
+  }
+
   Future<Alimento> _salvaSeCompleto(Alimento alimento) {
     if (!alimento.completo) {
       throw const ErroreOperazione(
@@ -104,7 +124,14 @@ class AlimentiRepositoryImpl implements AlimentiRepository {
     required double carboidrati100g,
     required double grassi100g,
     String? marca,
+    String? codiceBarre,
   }) async {
+    if (codiceBarre != null && !CodiceBarre.formatoDb.hasMatch(codiceBarre)) {
+      throw const ErroreOperazione(
+        'Il codice a barre non è valido.',
+        codice: 'alimento_non_valido',
+      );
+    }
     final errore = ValidazioneAlimento.alimento(
       nome: nome,
       kcal100g: kcal100g,
@@ -120,6 +147,7 @@ class AlimentiRepositoryImpl implements AlimentiRepository {
       Alimento(
         nome: nome.trim(),
         marca: marcaPulita == null || marcaPulita.isEmpty ? null : marcaPulita,
+        codiceBarre: codiceBarre,
         kcal100g: kcal100g,
         proteine100g: proteine100g,
         carboidrati100g: carboidrati100g,
