@@ -433,6 +433,30 @@ void main() {
     });
   });
 
+  group('Schermo stretto (RNF_U_3)', () {
+    testWidgets('320 dp e testo al 200%: nessun overflow, con e senza piano', (
+      tester,
+    ) async {
+      // 800 / 2,5 = 320 dp di larghezza, come il test degli strumenti del piano.
+      tester.view.physicalSize = const Size(800, 4200);
+      tester.view.devicePixelRatio = 2.5;
+      addTearDown(tester.view.reset);
+      await apri(tester, await dipendenze(), scalaTesto: 2);
+      expect(tester.takeException(), isNull);
+      // Con il testo al 200% il pulsante è sotto il bordo: prima si scorre.
+      final alternative = find.widgetWithText(TextButton, 'Alternative (1)');
+      await tester.scrollUntilVisible(find.text('Cereali integrali'), 200);
+      await tester.ensureVisible(alternative.first);
+      await tester.pumpAndSettle();
+      await tester.tap(alternative.first);
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+
+      await apri(tester, await dipendenze(conPiano: false), scalaTesto: 2);
+      expect(tester.takeException(), isNull);
+    });
+  });
+
   group('Navigazione (RNF_U_6, NP_1_PAZ)', () {
     testWidgets('dalla barra inferiore si apre la Dieta con il piano', (
       tester,

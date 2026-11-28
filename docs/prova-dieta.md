@@ -65,7 +65,7 @@ flutter run --dart-define=CENATO_RUOLO_FINTO=paziente --dart-define=CENATO_DIETA
 
 | # | Cosa fai | Atteso |
 |---|---|---|
-| 1 | Registra un paziente nuovo (email fittizia) con il codice `GIULIA26` | Arriva su Oggi |
+| 1 | Come `giulia@example.com` crea un **nuovo invito** (non usare `GIULIA26`: è l'invito in attesa della demo e deve restare inutilizzato); poi registra un paziente nuovo (email fittizia) con il codice appena creato | Il paziente arriva su Oggi |
 | 2 | Apri **Dieta** | "Il tuo nutrizionista sta preparando il piano"; card obiettivi con "non ha ancora impostato gli obiettivi" |
 | 3 | Come Giulia imposta gli obiettivi del nuovo paziente; poi su Dieta tira verso il basso | Compaiono gli obiettivi, resta lo stato vuoto del piano |
 | 4 | Come Giulia crea e salva un piano; poi tira verso il basso | Compare il piano, versione 1 |
