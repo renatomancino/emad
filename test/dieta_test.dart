@@ -97,6 +97,26 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  // Come nel mock-up UI_GP_1, la card degli obiettivi è larga quanto la
+  // pagina (meno i 16 dp di margine per lato), con il piano e senza.
+  for (final conPiano in [true, false]) {
+    testWidgets('card degli obiettivi a tutta larghezza '
+        '(${conPiano ? 'con' : 'senza'} piano, RNF_U_3)', (tester) async {
+      // Schermo largo (900 dp): con il font dei test, più largo di quello
+      // vero, su uno schermo stretto il contenuto riempirebbe comunque
+      // tutta la riga e il difetto non si vedrebbe.
+      schermoAlto(tester);
+      tester.view.physicalSize = const Size(2250, 4200);
+      await apri(tester, await dipendenze(conPiano: conPiano));
+      final pagina =
+          tester.view.physicalSize.width / tester.view.devicePixelRatio;
+      expect(
+        tester.getSize(find.byKey(const Key('obiettivi-dieta'))).width,
+        pagina - 32,
+      );
+    });
+  }
+
   group('Con piano (UC_GP_4 flusso principale, RF_GP_8, RF_GP_16)', () {
     testWidgets('obiettivi, versione, giorno di oggi, pasti e totali', (
       tester,
@@ -174,6 +194,42 @@ void main() {
       expect(find.text('Riso integrale'), findsOneWidget);
       expect(find.text('Petto di pollo'), findsOneWidget);
       expect(find.text('Pasta integrale'), findsNothing);
+    });
+
+    testWidgets('le alternative aperte non restano aperte cambiando giorno', (
+      tester,
+    ) async {
+      // Ogni riga ha il proprio stato aperto/chiuso: senza una chiave Flutter
+      // lo riusava per posizione e il Mercoledì ereditava quello del Lunedì.
+      schermoAlto(tester);
+      await apri(tester, await dipendenze());
+      await tester.tap(
+        find.widgetWithText(TextButton, 'Alternative (1)').first,
+      );
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Al posto di'), findsOneWidget);
+
+      await tester.tap(find.text('Mer'));
+      await tester.pumpAndSettle();
+      expect(find.text('Mercoledì'), findsOneWidget);
+      expect(find.textContaining('Al posto di'), findsNothing);
+    });
+
+    testWidgets('macro del pasto con un decimale e unità attaccata', (
+      tester,
+    ) async {
+      // Colazione del lunedì: 200 g di latte e 40 g di cereali. Un decimale
+      // come il totale del giorno; lo spazio prima di "g" è indivisibile
+      // (U+00A0), così col testo grande il numero non resta senza unità.
+      schermoAlto(tester);
+      await apri(tester, await dipendenze());
+      expect(
+        find.text(
+          'Proteine 10,4\u00A0g · Carboidrati 38,6\u00A0g · '
+          'Grassi 4,8\u00A0g',
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('nessuna azione di modifica', (tester) async {

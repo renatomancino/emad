@@ -5,6 +5,7 @@ import '../../../domain/modelli/obiettivi.dart';
 import '../../../domain/modelli/piano_alimentare.dart';
 import '../../../domain/regole/calcoli_piano.dart';
 import '../../comuni/componenti.dart';
+import '../alimenti/ricerca_alimento.dart' show formattaValore;
 import 'pasto_card.dart';
 import 'riepilogo_giorno.dart';
 
@@ -127,6 +128,10 @@ class _PianoSolaLetturaState extends State<PianoSolaLettura> {
         const SizedBox(height: 12),
         for (final pasto in giorno.pasti) ...[
           Card(
+            // Chiave per giorno e pasto: cambiando giorno (o versione) la
+            // card si ricrea, così le "Alternative" aperte non vengono
+            // ereditate dalla riga che sta nella stessa posizione.
+            key: ValueKey('pasto-$_giorno-${pasto.chiave}'),
             margin: EdgeInsets.zero,
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
@@ -162,7 +167,10 @@ class _MacroPasto extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final m = macroPasto(pasto);
-    String g(double v) => '${v.round()} g';
+    // Un decimale come il totale del giorno (arrotonda1 toglie i residui
+    // delle somme, tipo 10.399999). Lo spazio indivisibile U+00A0 tiene il
+    // numero attaccato alla "g" quando il testo grande va a capo.
+    String g(double v) => '${formattaValore(arrotonda1(v))}\u00A0g';
     return Padding(
       padding: const EdgeInsets.only(top: 2),
       child: Text(

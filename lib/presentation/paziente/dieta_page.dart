@@ -252,7 +252,9 @@ class _IntestazioneDieta extends StatelessWidget {
     final c = context.colori;
     final o = obiettivi;
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      // "stretch": la card occupa tutta la larghezza come nel mock-up
+      // UI_GP_1, invece di stringersi attorno ai quattro valori.
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Card(
           key: const Key('obiettivi-dieta'),
