@@ -98,6 +98,11 @@ abstract interface class AlimentiRepository {
     void Function(RisultatoRicerca dallaCache)? alRisultatoDallaCache,
   });
 
+  /// Solo la cache (tabella `alimenti`), senza chiamare Open Food Facts: la
+  /// usa l'importazione da file per abbinare i nomi (RF_GP_11). Lancia
+  /// `ErroreOperazione` se la cache non è raggiungibile.
+  Future<List<Alimento>> cercaInCache(String testo);
+
   /// L'alimento scelto: se viene da Open Food Facts lo salva nella cache con
   /// la fonte, poi lo segna tra i recenti. Restituisce l'alimento con `id`.
   /// Lancia `ErroreOperazione` per un alimento senza tutti i valori.

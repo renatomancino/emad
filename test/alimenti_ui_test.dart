@@ -42,6 +42,10 @@ class _ConErrori implements AlimentiRepository {
   }
 
   @override
+  Future<List<Alimento>> cercaInCache(String testo) =>
+      _vero.cercaInCache(testo);
+
+  @override
   Future<Alimento> scegli(Alimento a) => _vero.scegli(a);
 
   @override

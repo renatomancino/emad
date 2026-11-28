@@ -1,5 +1,7 @@
 import '../../core/dipendenze.dart';
 import '../../domain/modelli/profilo.dart';
+import '../../domain/repository/file_csv.dart';
+import '../dispositivo/file_csv_dispositivo.dart';
 import '../alimenti_repository.dart';
 import 'alimenti_cache_in_memoria.dart';
 import 'fonte_alimenti_online_finta.dart';
@@ -14,9 +16,14 @@ import 'profilo_repository_finto.dart';
 /// Dipendenze finte (in memoria) per test e per `CENATO_RUOLO_FINTO`.
 /// Restituisce anche i singoli oggetti, così i test possono ispezionarli.
 class DipendenzeFinte {
-  DipendenzeFinte({Ruolo? ruolo, DatiFinti? dati})
-    : dati = dati ?? DatiFinti(),
-      auth = AuthRepositoryFinto(ruoloIniziale: ruolo) {
+  DipendenzeFinte({
+    Ruolo? ruolo,
+    DatiFinti? dati,
+    // Predefinito: le finestre di sistema, così nella demo finta si possono
+    // scegliere file veri.
+    this.fileCsv = const FileCsvDispositivo(),
+  }) : dati = dati ?? DatiFinti(),
+       auth = AuthRepositoryFinto(ruoloIniziale: ruolo) {
     pazienti = PazientiRepositoryFinto(this.dati)
       ..alScollegamento = auth.scollega;
     abbonamento = AbbonamentoRepositoryFinto(this.dati);
@@ -31,6 +38,7 @@ class DipendenzeFinte {
     );
   }
 
+  final FileCsv fileCsv;
   final DatiFinti dati;
   final AuthRepositoryFinto auth;
   late final PazientiRepositoryFinto pazienti;
@@ -55,5 +63,6 @@ class DipendenzeFinte {
     obiettivi: obiettivi,
     piani: piani,
     modelli: modelli,
+    fileCsv: fileCsv,
   );
 }

@@ -33,9 +33,14 @@ class RicercaAlimento extends StatefulWidget {
     this.onCreaPersonalizzato,
     this.onScansiona,
     this.apriLink,
+    this.testoIniziale,
   });
 
   final AlimentiRepository repository;
+
+  /// Testo già nel campo all'apertura (importazione da file: il nome da
+  /// abbinare), con la ricerca avviata.
+  final String? testoIniziale;
 
   /// L'alimento scelto, già salvato nella cache.
   final ValueChanged<Alimento> onScelto;
@@ -79,6 +84,14 @@ class _RicercaAlimentoState extends State<RicercaAlimento> {
   void initState() {
     super.initState();
     _caricaElenchi();
+    final iniziale = widget.testoIniziale?.trim() ?? '';
+    if (iniziale.isNotEmpty) {
+      _testo.text = iniziale;
+      // Dopo il primo frame: la ricerca chiama setState.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _alCambio(iniziale);
+      });
+    }
   }
 
   @override
