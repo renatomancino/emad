@@ -16,6 +16,7 @@ import '../../comuni/stati_view.dart';
 import 'aggiungi_alimento_page.dart';
 import 'alternative_page.dart';
 import 'copia_giorno_sheet.dart';
+import 'importa_piano_page.dart';
 import 'modelli_sheet.dart';
 import 'pasto_card.dart';
 import 'quantita_sheet.dart';
@@ -314,6 +315,33 @@ class _PianoEditorPageState extends State<PianoEditorPage> {
     } on FormatException {
       _avvisa('Questo piano modello non è leggibile.');
     }
+  }
+
+  /// "Importa da file" (UC_GP_5): la schermata restituisce una **bozza** che
+  /// si apre qui, da rivedere. Diventa una versione del paziente solo con
+  /// "Salva e assegna"; se si esce senza salvare non resta nulla.
+  Future<void> _importaDaFile() async {
+    // Con modifiche non salvate si chiede prima di sostituirle.
+    if (_modificato && _piano != null) {
+      final procedi = await _conferma(
+        titolo: 'Sostituire le modifiche?',
+        messaggio: 'Il piano importato prende il posto di quello che stai modificando.',
+        conferma: 'Importa',
+      );
+      if (!procedi || !mounted) return;
+    }
+    final esito = await Navigator.of(context).push<RisultatoImportazione>(
+      MaterialPageRoute(builder: (_) => ImportaPianoPage(dip: widget.dip)),
+    );
+    if (esito == null || !mounted) return;
+    _creaDaImpostazione(esito.piano);
+    final righe = esito.righeImportate == 1
+        ? '1 riga importata'
+        : '${esito.righeImportate} righe importate';
+    _avvisa(
+      'Bozza pronta: $righe, ${esito.righeIgnorate} ignorate. Controlla e '
+      'tocca ✓ per assegnarla.',
+    );
   }
 
   Future<void> _aggiungiPasto() async {
@@ -620,11 +648,17 @@ class _PianoEditorPageState extends State<PianoEditorPage> {
             if (inModifica)
               PopupMenuButton<String>(
                 tooltip: 'Altre azioni',
-                onSelected: (_) => _salvaPianoComeModello(),
+                onSelected: (scelta) => scelta == 'importa'
+                    ? _importaDaFile()
+                    : _salvaPianoComeModello(),
                 itemBuilder: (_) => const [
                   PopupMenuItem(
                     value: 'modello',
                     child: Text('Salva piano come modello'),
+                  ),
+                  PopupMenuItem(
+                    value: 'importa',
+                    child: Text('Importa da file'),
                   ),
                 ],
               ),
@@ -642,6 +676,7 @@ class _PianoEditorPageState extends State<PianoEditorPage> {
                   onImposta: _vaiAgliObiettivi,
                   onCrea: _creaDaImpostazione,
                   onDaModello: _partiDaModello,
+                  onImporta: _importaDaFile,
                 )
               : _editor(context),
         ),
@@ -893,6 +928,7 @@ class _Impostazione extends StatefulWidget {
     required this.onImposta,
     required this.onCrea,
     required this.onDaModello,
+    required this.onImporta,
   });
 
   final String? nomePaziente;
@@ -900,6 +936,7 @@ class _Impostazione extends StatefulWidget {
   final VoidCallback onImposta;
   final ValueChanged<PianoAlimentare> onCrea;
   final VoidCallback onDaModello;
+  final VoidCallback onImporta;
 
   @override
   State<_Impostazione> createState() => _ImpostazioneState();
@@ -1012,6 +1049,12 @@ class _ImpostazioneState extends State<_Impostazione> {
               onPressed: widget.onDaModello,
               icon: const Icon(Icons.bookmark_border),
               label: const Text('Parti da un piano modello'),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: widget.onImporta,
+              icon: const Icon(Icons.upload_file),
+              label: const Text('Importa da file'),
             ),
           ],
         ),

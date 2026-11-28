@@ -16,7 +16,11 @@ class AggiungiAlimentoPage extends StatelessWidget {
     super.key,
     required this.alimenti,
     this.etichettaConferma = 'Aggiungi al pasto',
+    this.testoIniziale,
   });
+
+  /// Nome già scritto nella ricerca (abbinamento di una riga importata).
+  final String? testoIniziale;
 
   final AlimentiRepository alimenti;
 
@@ -29,6 +33,7 @@ class AggiungiAlimentoPage extends StatelessWidget {
       appBar: AppBar(title: const Text('Aggiungi alimento')),
       body: RicercaAlimento(
         repository: alimenti,
+        testoIniziale: testoIniziale,
         onScelto: (a) => Navigator.of(context).pop<Alimento>(a),
         onScansiona: () async {
           final r = await Navigator.of(context).push<RisultatoScansione>(

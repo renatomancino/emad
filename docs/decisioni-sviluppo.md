@@ -290,3 +290,28 @@ I dati sono in `lib/data/finto/dieta_finta.dart` e li carica solo `main.dart`, n
 
 - **Oggi / check-in (MC):** `CollegamentoRepository.mioPazienteId()` dà l'id per `check_in.paziente_id` e per `PianiRepository.corrente`. Il piano di prova di `DietaFinta` può servire anche alla sezione Oggi in modalità finta.
 - **Notifiche:** il "nuovo piano" visto dal paziente su un altro telefono oggi richiede il "tira per aggiornare" (D34). Una notifica o Realtime lo renderebbero automatico.
+
+## Importazione del piano da file CSV (UC_GP_5, RF_GP_10, RF_GP_11, RNF_IN_4, RNF_P_4)
+
+Scheda Trello: *[MC] Importazione del piano da file CSV*. Nessuna migrazione. Formato in `docs/formato-csv.md`, checklist in `docs/prova-importazione.md`.
+
+### D37 · La conferma crea una bozza nell'editor, non assegna il piano
+
+Il RAD (UC_GP_5, passo 7, e SC_GP_3, passo 8) dice che il sistema **crea il piano come bozza** e passa a UC_GP_1; la scheda Trello dice di creare la nuova versione "usando il repository dell'editor", che oggi la assegna subito al paziente. **Scelto da Mario Celzo il 28/11/2026: bozza nell'editor**, come il RAD. `ImportaPianoPage` restituisce il piano all'editor senza salvarlo; la versione nasce con "Salva e assegna". **Limite:** la bozza sta solo in memoria: uscendo senza salvare si perde (l'editor chiede conferma). Con modifiche non salvate, importare chiede prima di sostituirle.
+
+### D38 · Abbinamento automatico solo con nomi identici
+
+Un nome simile ("Riso" e "Riso basmati") non si abbina da solo: cambierebbe kcal e macro senza che il nutrizionista se ne accorga. Il confronto ignora maiuscole, accenti, spazi doppi e tipo di apostrofo (`normalizzaNome`). Per ogni nome si guarda **prima la cache** (`AlimentiRepository.cercaInCache`, nuovo) con le ricerche in cache **a gruppi di 8 in parallelo** (una alla volta sull'emulatore l'abbinamento del modello durava oltre 10 s, contro i 5 di RNF_P_4); solo per i nomi mancanti si usa la ricerca completa, una alla volta, per rispettare il limite di Open Food Facts (D11): con molti nomi nuovi alcuni possono restare da scegliere a mano. Con più alimenti dallo stesso nome si prende il primo (preferiti e recenti per primi) e l'anteprima mostra quale, con marca e kcal: si può cambiare.
+
+### D39 · Note, orari e limiti
+
+- La colonna `note` proposta dalla scheda si accetta e si mostra in anteprima, ma **non si salva**: nel database e nel modello del piano non c'è un campo note, e aggiungerlo richiederebbe una migrazione. Da segnalare se serve.
+- Il file non ha l'orario: si usa quello proposto per il tipo di pasto, modificabile nell'editor. La data di inizio è oggi, modificabile.
+- Quantità: stesse regole dell'editor (`validaQuantita`, massimo 5000 g, D20). Massimo **1000 righe** e **1 MB** come guardie tecniche contro il file sbagliato.
+- Alla conferma gli alimenti scelti si salvano in cache e tra i recenti (`scegli`): prima della conferma l'importazione automatica non scrive nulla. "Scegli" e "Crea" fatti a mano invece salvano subito l'alimento, come nel resto dell'app.
+
+### D40 · Ingresso, file e modello
+
+- SC_GP_3 parla di una sezione "Piani" che non esiste: il pulsante **Importa da file** è nella schermata del piano nuovo e nel menu dell'editor.
+- Scelta e salvataggio dei file passano da `FileCsv` (`file_picker`, già presente). Nessun filtro per estensione: su Android molti gestori di file mostrerebbero i `.csv` disattivati.
+- Il modello (`assets/modello_piano.csv`, UTF-8 con BOM e `;`) usa i nomi degli alimenti di prova, così con i dati demo si abbina da solo.

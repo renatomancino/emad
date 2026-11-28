@@ -164,6 +164,15 @@ class AlimentiRepositoryImpl implements AlimentiRepository {
       cache.recenti(limite: limite);
 
   @override
+  Future<List<Alimento>> cercaInCache(String testo) {
+    final termine = testo.trim();
+    if (termine.length < _lunghezzaMinimaRicerca) {
+      return Future.value(const []);
+    }
+    return cache.cercaPerNome(termine);
+  }
+
+  @override
   Future<List<Alimento>> preferiti() => cache.preferiti();
 
   @override

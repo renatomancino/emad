@@ -73,6 +73,8 @@ flutter:
   # Il file .env non è versionato: crealo da .env.example (vedi README.md).
   assets:
     - .env
+    # Modello scaricabile per importare un piano (RF_GP_10, docs/formato-csv.md).
+    - assets/modello_piano.csv
 
   # Font incorporati nell'app (licenza SIL OFL, testi in assets/fonts/):
   # nessun download a runtime, la demo funziona anche senza rete.
