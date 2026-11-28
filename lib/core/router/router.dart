@@ -147,7 +147,7 @@ GoRouter creaRouter(Dipendenze dip) {
             routes: [
               GoRoute(
                 path: Rotte.pazienteDieta,
-                builder: (context, stato) => const DietaPage(),
+                builder: (context, stato) => DietaPage(dip: dip),
               ),
             ],
           ),

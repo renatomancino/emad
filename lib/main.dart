@@ -7,6 +7,7 @@ import 'core/dipendenze.dart';
 import 'core/router/router.dart';
 import 'core/tema/tema.dart';
 import 'data/alimenti_repository.dart';
+import 'data/finto/dieta_finta.dart';
 import 'data/finto/dipendenze_finte.dart';
 import 'data/open_food_facts/open_food_facts_client.dart';
 import 'data/supabase/alimenti_cache_supabase.dart';
@@ -25,6 +26,12 @@ import 'presentation/comuni/errore_configurazione_page.dart';
 /// `flutter run --dart-define=CENATO_RUOLO_FINTO=paziente` (o `nutrizionista`).
 const _ruoloFinto = String.fromEnvironment('CENATO_RUOLO_FINTO');
 
+/// Solo con `CENATO_RUOLO_FINTO=paziente`: piano di prova nella sezione
+/// Dieta. Predefinito "con piano"; con
+/// `--dart-define=CENATO_DIETA_FINTA=senza_piano` ci sono solo gli obiettivi
+/// e la sezione mostra lo stato vuoto (docs/prova-dieta.md).
+const _dietaFinta = String.fromEnvironment('CENATO_DIETA_FINTA');
+
 /// Punto di ingresso: legge `.env`, inizializza Supabase e avvia l'app.
 /// Se la configurazione non è valida mostra un messaggio chiaro invece
 /// di chiudersi (RNF_A_2).
@@ -32,7 +39,14 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   if (_ruoloFinto.isNotEmpty) {
-    runApp(CenatoApp(dip: DipendenzeFinte(ruolo: Ruolo.daDb(_ruoloFinto)).dip));
+    final ruolo = Ruolo.daDb(_ruoloFinto);
+    final finte = DipendenzeFinte(ruolo: ruolo);
+    // I dati di prova della Dieta si caricano solo qui, non in
+    // DipendenzeFinte: i test partono sempre senza piani.
+    if (ruolo == Ruolo.paziente) {
+      await DietaFinta.carica(finte, conPiano: _dietaFinta != 'senza_piano');
+    }
+    runApp(CenatoApp(dip: finte.dip));
     return;
   }
 

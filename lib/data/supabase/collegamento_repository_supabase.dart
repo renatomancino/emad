@@ -39,4 +39,25 @@ class CollegamentoRepositorySupabase implements CollegamentoRepository {
       throw traduciErrore(e);
     }
   }
+
+  @override
+  Future<String?> mioPazienteId() async {
+    final utente = _db.auth.currentUser;
+    if (utente == null) return null;
+    try {
+      // Stessa lettura di `_leggiCollegamento` dell'autenticazione, ma
+      // restituisce l'id: la policy `pazienti_select_paz` mostra al paziente
+      // solo le proprie righe.
+      final riga = await _db
+          .from('pazienti')
+          .select('id')
+          .eq('utente_id', utente.id)
+          .eq('stato', 'attivo')
+          .limit(1)
+          .maybeSingle();
+      return riga?['id'] as String?;
+    } catch (e) {
+      throw traduciErrore(e);
+    }
+  }
 }

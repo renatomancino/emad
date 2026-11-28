@@ -18,9 +18,16 @@ class RigaVoce extends StatelessWidget {
     required this.voce,
     this.azione,
     this.onAlternative,
+    this.alternativeEspandibili = false,
   });
 
   final VocePiano voce;
+
+  /// `true` nella sezione Dieta del paziente (UC_GP_4): le alternative non
+  /// sono scritte per esteso ma dietro un pulsante "Alternative (N)" che le
+  /// apre, per tenere il piano leggibile. Solo consultazione. Con `false`
+  /// (editor e storico del nutrizionista) resta la riga di testo di sempre.
+  final bool alternativeEspandibili;
 
   /// Elementi a destra (cestino, maniglia di riordino): solo nell'editor.
   final Widget? azione;
@@ -54,7 +61,9 @@ class RigaVoce extends StatelessWidget {
                   '${kcalTesto(macro.kcal)} kcal',
                   style: testo.bodyMedium?.copyWith(color: c.testoSecondario),
                 ),
-                if (alternative.isNotEmpty)
+                if (alternative.isNotEmpty && alternativeEspandibili)
+                  AlternativeEspandibili(voce: voce)
+                else if (alternative.isNotEmpty)
                   Text(
                     alternative,
                     maxLines: 3,
@@ -119,6 +128,70 @@ class IntestazionePasto extends StatelessWidget {
           ),
         ),
         ?menu,
+      ],
+    );
+  }
+}
+
+/// Alternative di una voce, chiuse di default (sezione Dieta del paziente,
+/// RF_GP_8). Il pulsante è alto almeno 48 dp (RNF_U_3) e annuncia se è
+/// aperto. Le kcal di ogni alternativa vengono da `macroVoce` (calcoli già
+/// esistenti, D20): le alternative non entrano nei totali del pasto (D24).
+class AlternativeEspandibili extends StatefulWidget {
+  const AlternativeEspandibili({super.key, required this.voce});
+
+  final VocePiano voce;
+
+  @override
+  State<AlternativeEspandibili> createState() => _AlternativeEspandibiliState();
+}
+
+class _AlternativeEspandibiliState extends State<AlternativeEspandibili> {
+  bool _aperte = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final testo = Theme.of(context).textTheme;
+    final c = context.colori;
+    final voce = widget.voce;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Semantics(
+          expanded: _aperte,
+          child: TextButton.icon(
+            key: Key('mostra-alternative-${voce.chiave}'),
+            onPressed: () => setState(() => _aperte = !_aperte),
+            icon: Icon(_aperte ? Icons.expand_less : Icons.expand_more),
+            label: Text('Alternative (${voce.alternative.length})'),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              minimumSize: const Size(48, 48),
+            ),
+          ),
+        ),
+        if (_aperte)
+          Padding(
+            padding: const EdgeInsets.only(left: 8, bottom: 4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Al posto di ${voce.alimento.nome} puoi scegliere:',
+                  style: testo.bodySmall?.copyWith(color: c.testoSecondario),
+                ),
+                for (final a in voce.alternative)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      '• ${a.alimento.nome} · ${formattaValore(a.quantitaG)} g'
+                      ' · ${kcalTesto(macroVoce(a.alimento, a.quantitaG).kcal)} kcal',
+                      style: testo.bodyMedium,
+                    ),
+                  ),
+              ],
+            ),
+          ),
       ],
     );
   }
