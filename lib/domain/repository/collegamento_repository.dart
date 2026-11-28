@@ -21,4 +21,14 @@ abstract class CollegamentoRepository {
 
   /// Collega il paziente autenticato al nutrizionista (RPC `accetta_invito`).
   Future<void> accetta(String codice);
+
+  /// Id della riga in `pazienti` del paziente autenticato con collegamento
+  /// **Attivo**, `null` se non è collegato (D18, D23).
+  ///
+  /// Serve perché piani e obiettivi sono legati alla riga `pazienti`, non
+  /// all'id utente: la sezione Dieta (UC_GP_4) lo passa a
+  /// `PianiRepository.corrente` e `ObiettiviRepository.corrente`. Si filtra
+  /// sullo stato Attivo perché chi si è scollegato e ricollegato ha più righe
+  /// (le vecchie sono archiviate). Lancia `ErroreOperazione` se la rete manca.
+  Future<String?> mioPazienteId();
 }

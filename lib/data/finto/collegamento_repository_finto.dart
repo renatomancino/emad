@@ -17,6 +17,14 @@ class CollegamentoRepositoryFinto implements CollegamentoRepository {
   /// Se impostato, `accetta` fallisce con questo errore (per i test).
   Object? erroreProssimaAccettazione;
 
+  /// Id della riga `pazienti` del paziente simulato: 'p1' è Marco, il primo
+  /// paziente di `DatiFinti`. Volutamente diverso dall'id utente finto
+  /// ('finto-paziente'), così i test scoprono chi usa l'id sbagliato (D18).
+  String pazienteId = 'p1';
+
+  /// Con `true` [mioPazienteId] fallisce come un errore di rete (per i test).
+  bool nonRaggiungibile = false;
+
   static ErroreOperazione _errore(String codice, String messaggio) =>
       ErroreOperazione(messaggio, codice: codice);
 
@@ -61,5 +69,17 @@ class CollegamentoRepositoryFinto implements CollegamentoRepository {
     await verifica(codice);
     accettati.add(Validazione.normalizzaCodice(codice));
     _auth.collega();
+  }
+
+  @override
+  Future<String?> mioPazienteId() async {
+    if (nonRaggiungibile) {
+      throw const ErroreOperazione(
+        'Connessione non riuscita. Controlla la rete e riprova.',
+        codice: 'rete',
+      );
+    }
+    // Come nel database: solo un paziente collegato (Attivo) ha la riga.
+    return _auth.collegato ? pazienteId : null;
   }
 }
