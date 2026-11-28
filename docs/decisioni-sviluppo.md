@@ -242,3 +242,51 @@ La scheda vieta pacchetti diversi da `mobile_scanner`, che chiede il permesso da
 
 - **Importazione CSV (MC):** per abbinare righe con un codice a barre si può usare `AlimentiRepository.perCodiceBarre` (prima la cache, poi Open Food Facts).
 - `AlimentiRepository.creaPersonalizzato` accetta ora `codiceBarre`; `AlimentiCache` ha `perCodiceBarre`; un doppione dello stesso codice tra i propri personalizzati dà `ErroreOperazione` con codice `codice_barre_esistente`.
+
+
+## Sezione Dieta del paziente (UC_GP_4, RF_GP_8, RF_GP_16, RNF_U_3, RNF_U_6)
+
+Scheda Trello: *[MC] Sezione Dieta del paziente (piano e obiettivi)*. Nessuna migrazione: le policy di lettura c'erano già (vedi D36). Checklist per il telefono in `docs/prova-dieta.md`. Scelte fatte di notte senza poter chiedere: **da rivedere con Mario**.
+
+### D32 · Testo dello stato vuoto e obiettivi senza piano
+
+UC_GP_4, flusso 2.1, scrive *"il tuo nutrizionista non ha ancora assegnato un piano"*; la scheda chiede *"Il tuo nutrizionista sta preparando il piano"*. Si usa il **testo della scheda**, più recente e meno brusco, con sotto "Quando il piano sarà pronto lo troverai qui… Tira verso il basso per controllare". Se mancando il piano gli obiettivi ci sono già (UC_GP_6 viene prima di UC_GP_1), **la card degli obiettivi resta visibile** sopra lo stato vuoto, perché RF_GP_16 li vuole visibili al paziente. Se mancano anche gli obiettivi, la card dice "Il tuo nutrizionista non ha ancora impostato gli obiettivi." Da allineare nel RAD (passo 2.1) se il testo della scheda va bene.
+
+### D33 · Quale riga di `pazienti`: `CollegamentoRepository.mioPazienteId()`
+
+Come chiedevano D18 e D23, piani e obiettivi si leggono con l'**id della riga in `pazienti`**, non con l'id utente. Il nuovo metodo `CollegamentoRepository.mioPazienteId()` legge `pazienti` con `utente_id = utente autenticato` **e `stato = 'attivo'`**: chi si è scollegato e poi ricollegato ha più righe, e quelle archiviate non devono contare. Senza riga attiva restituisce `null` e la sezione mostra lo stato vuoto (di solito il router porta prima alla schermata del codice di invito). Nel finto l'id è `p1` (Marco), diverso apposta dall'id utente `finto-paziente`: un test fallisce se qualcuno usa l'id sbagliato.
+
+### D34 · Versione corrente sempre, aggiornamento e rete assente
+
+- La pagina legge `PianiRepository.corrente` e `ObiettiviRepository.corrente` all'apertura e si **ricarica da sola** quando i repository avvisano di un salvataggio. Sullo stesso telefono succede subito; tra due telefoni diversi l'app oggi **non ha un canale in tempo reale** (Supabase Realtime non è usato), quindi vale il **"tira per aggiornare"** (la scheda lo accetta) oppure riaprire la sezione.
+- **UC_GP_4, flusso 2.2:** se l'aggiornamento fallisce e un piano è già a schermo, **resta quello** con l'avviso "Aggiornamento non riuscito: vedi l'ultimo piano scaricato". L'errore a tutta pagina con "Riprova" compare solo se non è mai stato caricato nulla. **Limite:** "l'ultimo piano scaricato" vale finché l'app resta aperta. Una copia sul telefono che sopravviva alla chiusura dell'app (cache offline) **non è stata fatta**: richiederebbe un pacchetto o un file locale con dati sanitari, una scelta da prendere insieme (RNF di sicurezza). Da decidere se serve per la demo.
+- Se la nuova versione non ha più il giorno selezionato, la pagina passa al giorno di oggi o al primo del piano. Prima `PianoSolaLettura` avrebbe mostrato "Questo piano non ha giorni".
+
+### D35 · Riuso di `PianoSolaLettura` e niente calcoli nuovi
+
+La sezione usa `PianoSolaLettura` e `RigaVoce` con parametri **facoltativi**, i cui valori predefiniti lasciano lo storico delle versioni e l'editor come prima:
+
+- `giornoIniziale` / `giornoOggi`: si apre sul giorno di oggi; la sua pillola dice **"Lun · oggi"** e il riepilogo **"Lunedì (oggi)"**. L'evidenza è anche **a testo**, non solo a colore (RNF_U_3).
+- `intestazione`: la card "I tuoi obiettivi giornalieri" (kcal, proteine, carboidrati, grassi, come nel mock-up UI_GP_1) e "Piano aggiornato il gg/mm/aaaa" (`creato_il` della versione). L'intestazione della pagina dice "Piano versione N · dal gg/mm/aaaa".
+- `macroPerPasto`: sotto ogni pasto proteine, carboidrati e grassi (da `macroPasto`).
+- `alternativeEspandibili`: le alternative sono dietro **"Alternative (N)"** (pulsante alto 48 dp, stato aperto/chiuso annunciato al lettore di schermo). Aperte, mostrano "Al posto di X puoi scegliere:" e per ognuna alimento, grammi e kcal (da `macroVoce`). Le alternative non entrano nei totali (D24).
+- Il totale del giorno e lo scostamento dagli obiettivi sono quelli di `RiepilogoGiorno` (`macroGiorno`, `scostamento`): **nessun totale ricalcolato con codice nuovo**.
+- Il selettore mostra i **giorni del piano** (nel seed sono sempre tutti e sette). Se un piano non prevede un giorno, quella pillola non c'è: non si inventa un giorno vuoto.
+
+Nessuna azione di modifica: niente pulsanti di aggiunta, cestini, maniglie o menu. L'unico pulsante a icona è il profilo nell'intestazione, come nelle altre sezioni.
+
+### D36 · Sicurezza: cosa garantisce che il paziente non legga piani altrui
+
+Nessuna migrazione nuova. In `002_rls.sql` la lettura di `piani`, `giorni`, `pasti`, `voci_pasto` e `alternative` passa da `privato.piano_leggibile`: il paziente legge solo le versioni **non in bozza** dei piani legati a una sua riga di `pazienti`. `obiettivi_select` usa `e_mio_collegamento`. Il paziente **non ha policy di scrittura** su queste tabelle, e il salvataggio passa da `salva_piano`, che controlla che il chiamante sia il nutrizionista. Il test esistente `supabase/tests/rls.sql` contiene "PAZ A1 · Legge solo il proprio piano". **Stanotte non è stato eseguito**: sul Mac non c'è PostgreSQL e Supabase non andava toccato. Va rieseguito domattina (`docs/prova-dieta.md`, punto 0).
+
+### Come provarla senza Supabase
+
+- `flutter run --dart-define=CENATO_RUOLO_FINTO=paziente`: Marco con **piano di prova** (7 giorni, alternative a colazione, pranzo e cena) e obiettivi 2000/110/230/65.
+- `flutter run --dart-define=CENATO_RUOLO_FINTO=paziente --dart-define=CENATO_DIETA_FINTA=senza_piano`: **solo obiettivi**, stato vuoto.
+
+I dati sono in `lib/data/finto/dieta_finta.dart` e li carica solo `main.dart`, non `DipendenzeFinte`: i test partono sempre senza piani.
+
+### Per le altre schede
+
+- **Oggi / check-in (MC):** `CollegamentoRepository.mioPazienteId()` dà l'id per `check_in.paziente_id` e per `PianiRepository.corrente`. Il piano di prova di `DietaFinta` può servire anche alla sezione Oggi in modalità finta.
+- **Notifiche:** il "nuovo piano" visto dal paziente su un altro telefono oggi richiede il "tira per aggiornare" (D34). Una notifica o Realtime lo renderebbero automatico.
